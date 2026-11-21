@@ -80,7 +80,38 @@ func funcMap() template.FuncMap {
 		},
 		"add":   func(a, b int) int { return a + b },
 		"split": strings.Fields,
-		"eq64":  func(a, b int64) bool { return a == b },
+		"upper": strings.ToUpper,
+		"pctf": func(v float64) string {
+			if v < 0 {
+				return "—"
+			}
+			if v >= 100 {
+				return "100"
+			}
+			return fmt.Sprintf("%.2f", math.Floor(v*100)/100)
+		},
+		"pctLevel": func(v float64) string {
+			switch {
+			case v < 0:
+				return ""
+			case v >= 99.9:
+				return "good"
+			case v >= 99:
+				return "ok"
+			case v >= 95:
+				return "warn"
+			}
+			return "bad"
+		},
+		"msNum": func(v float64) string {
+			if v < 10 {
+				return fmt.Sprintf("%.1f", v)
+			}
+			return fmt.Sprintf("%.0f", v)
+		},
+		"clock":     func(t time.Time) string { return t.Local().Format("15:04:05") },
+		"hourLabel": func(t time.Time) string { return t.Local().Format("15:04") },
+		"eq64":      func(a, b int64) bool { return a == b },
 		"contains": func(list []int64, id int64) bool {
 			for _, x := range list {
 				if x == id {

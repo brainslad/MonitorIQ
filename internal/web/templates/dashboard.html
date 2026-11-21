@@ -1,58 +1,104 @@
-{{template "top" .}}
-{{$d := .Data}}
-<div class="page-head">
-  <h1>Dashboard</h1>
-  <div class="actions"><a class="btn" href="/admin/hosts/new">+ Host</a><a class="btn primary" href="/admin/monitors/new">+ Serviço</a></div>
+{{define "topstatus"}}{{$k := .Data.K}}
+<div class="live-status {{if $k.Down}}down{{else if $k.Degraded}}degraded{{else}}up{{end}}">
+  <span class="pulse"></span>
+  {{if $k.Down}}{{$k.Down}} {{if eq $k.Down 1}}serviço em baixo{{else}}serviços em baixo{{end}}{{else if $k.Degraded}}{{$k.Degraded}} degradado{{if ne $k.Degraded 1}}s{{end}}{{else}}Tudo operacional{{end}}
 </div>
+<div class="muted small">atualizado <strong class="fg" data-clock>{{clock .Data.Now}}</strong></div>
+{{end}}
+{{template "top" .}}
+{{$d := .Data}}{{$k := $d.K}}
 
-<section class="summary">
-  <div class="stat up"><span class="num">{{index $d.Counts "up"}}</span><span>Operacionais</span></div>
-  <div class="stat degraded"><span class="num">{{index $d.Counts "degraded"}}</span><span>Degradados</span></div>
-  <div class="stat down"><span class="num">{{index $d.Counts "down"}}</span><span>Em baixo</span></div>
-  <div class="stat unknown"><span class="num">{{index $d.Counts "unknown"}}</span><span>Por verificar</span></div>
-  <div class="stat paused"><span class="num">{{index $d.Counts "paused"}}</span><span>Pausados</span></div>
+<section class="kpis">
+  <div class="card kpi">
+    <div class="kpi-label">Serviços</div>
+    <div class="kpi-value">{{$k.Total}}</div>
+    <div class="stack" aria-hidden="true">
+      <span class="s-up" style="width:{{$k.BarUp}}%"></span><span class="s-degraded" style="width:{{$k.BarDegraded}}%"></span><span class="s-down" style="width:{{$k.BarDown}}%"></span><span class="s-paused" style="width:{{$k.BarPaused}}%"></span>
+    </div>
+    <div class="kpi-foot"><b class="c-up">{{$k.Up}}</b> ok · <b class="c-degraded">{{$k.Degraded}}</b> degradados · <b class="c-down">{{$k.Down}}</b> em baixo · <b>{{$k.Paused}}</b> pausados</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Uptime <span class="accent">média 24h</span></div>
+    <div class="kpi-value {{pctLevel $k.Uptime24}}">{{pctf $k.Uptime24}}<small>{{if ge $k.Uptime24 0.0}}%{{end}}</small></div>
+    <div class="kpi-foot">30 dias: {{pctf $k.Uptime30}}{{if ge $k.Uptime30 0.0}}%{{end}}</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Resposta <span class="accent">média atual</span></div>
+    <div class="kpi-value">{{if ge $k.RespAvg 0.0}}{{msNum $k.RespAvg}}<small>ms</small>{{else}}—{{end}}</div>
+    <div class="kpi-foot">{{if $k.SlowestName}}mais lento: {{$k.SlowestName}} ({{msNum $k.SlowestMs}} ms){{else}}sem dados{{end}}</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Incidentes</div>
+    <div class="kpi-value {{if $k.OpenIncidents}}bad{{else}}good{{end}}">{{$k.OpenIncidents}}<small>{{if eq $k.OpenIncidents 1}}aberto{{else}}abertos{{end}}</small></div>
+    <div class="kpi-foot">{{$k.Incidents24h}} nas últimas 24h</div>
+  </div>
 </section>
 
-{{if not $d.Groups}}
-<div class="card empty">
-  <h2>Ainda não há serviços monitorizados</h2>
-  <p>Comece por criar um <a href="/admin/hosts/new">host</a> (servidor, website ou equipamento) e depois adicione os serviços a verificar: HTTP/HTTPS, ping, traceroute, DNS, SMTP, certificados TLS ou uma porta TCP.</p>
-</div>
-{{end}}
+<section class="dash-mid">
+  <div class="card">
+    <div class="card-title">Tempo de resposta <span class="accent">média dos serviços · 24h</span></div>
+    <div class="chart-box"><canvas id="dash-chart" data-series="/api/dashboard/series"></canvas></div>
+  </div>
+  <div class="card incidents">
+    <div class="card-title">Incidentes recentes</div>
+    <div class="inc-list">
+    {{range $d.Incidents}}
+      <a class="inc" href="/monitors/{{.MonitorID}}">
+        <div class="inc-head"><strong>{{.MonitorName}}</strong>{{if .EndedAt}}<span class="pill resolved">RESOLVIDO</span>{{else}}<span class="pill open {{statusClass .To}}">ABERTO</span>{{end}}</div>
+        <div class="muted small ellipsis2">{{.Message}}</div>
+        <div class="muted small">há {{since .CreatedAt}} · {{if .EndedAt}}durou {{between .CreatedAt .EndedAt}}{{else}}em curso{{end}}</div>
+      </a>
+    {{else}}
+      <p class="muted small">Sem incidentes nos últimos 7 dias.</p>
+    {{end}}
+    </div>
+  </div>
+</section>
 
-{{range $d.Groups}}
-<section class="card group">
-  <div class="group-head"><h2>{{.HostName}}</h2><span class="muted mono">{{.Address}}</span><a class="small-link" href="/admin/monitors/new?host={{.HostID}}">+ serviço</a></div>
+<section class="card">
+  {{if not $d.Monitors}}
+  <div class="empty">
+    <h2>Ainda não há serviços monitorizados</h2>
+    <p class="muted">Crie um <a href="/admin/hosts/new">host</a> e adicione-lhe serviços: HTTP/HTTPS, ping, traceroute, DNS, SMTP, certificados TLS ou uma porta TCP.</p>
+    <a class="btn primary" href="/admin/hosts/new">+ Novo host</a>
+  </div>
+  {{else}}
+  <div class="toolbar" data-filters>
+    <div class="pills" data-filter-group="status">
+      <button class="fpill active" data-value="all">Todos <span>{{$k.Total}}</span></button>
+      <button class="fpill" data-value="down">Em baixo <span>{{$k.Down}}</span></button>
+      <button class="fpill" data-value="degraded">Degradados <span>{{$k.Degraded}}</span></button>
+      <button class="fpill" data-value="up">Ok <span>{{$k.Up}}</span></button>
+      <button class="fpill" data-value="paused">Pausados <span>{{$k.Paused}}</span></button>
+    </div>
+    <div class="pills" data-filter-group="type">
+      <button class="fpill active" data-value="all">Todos os tipos</button>
+      {{range $d.Types}}<button class="fpill" data-value="{{.}}">{{upper .}}</button>{{end}}
+    </div>
+    <input class="search" type="search" placeholder="procurar nome ou alvo…" data-search aria-label="Procurar">
+    <a class="btn primary" href="/admin/monitors/new">+ Serviço</a>
+  </div>
   <div class="table-wrap">
-  <table class="table">
-    <thead><tr><th></th><th>Serviço</th><th>Tipo</th><th class="num">24h</th><th class="num">30 dias</th><th class="num">Latência</th><th class="hide-sm">Últimas 24h</th><th class="hide-sm">Verificado</th></tr></thead>
+  <table class="table mon-table">
+    <thead><tr><th>Estado</th><th>Serviço</th><th>Tipo</th><th class="num">Resposta</th><th class="num">24h</th><th class="num">30d</th><th class="hide-sm">Últimas 24h</th></tr></thead>
     <tbody>
-    {{range .Monitors}}
-    <tr class="{{if not .Enabled}}paused{{end}}">
-      <td>{{template "dot" .DisplayStatus}}</td>
-      <td><a href="/monitors/{{.ID}}"><strong>{{.Name}}</strong></a><div class="muted small ellipsis" title="{{.LastMessage}}">{{if .Enabled}}{{.LastMessage}}{{else}}Pausado{{end}}</div></td>
-      <td class="muted">{{typeLabel .Type}}</td>
+    {{range $d.Monitors}}
+    {{$st := .DisplayStatus}}
+    <tr data-status="{{if .Enabled}}{{statusClass .Status}}{{else}}paused{{end}}" data-type="{{.Type}}" data-text="{{.Name}} {{.HostName}} {{.EffectiveTarget}}">
+      <td class="nowrap">{{if .Enabled}}{{template "stext" .Status}}{{else}}<span class="stext unknown"><span class="dot unknown"></span>Pausado</span>{{end}}</td>
+      <td><a class="mon-name" href="/monitors/{{.ID}}">{{.Name}}</a><div class="muted small mono">{{.EffectiveTarget}}{{if .Port}}:{{.Port}}{{end}}</div></td>
+      <td>{{template "tbadge" .Type}}</td>
+      <td class="num {{if eq $st 2}}warn{{end}}">{{if and .Enabled (ne .Status 3)}}{{fmtMs .LastLatencyMs}}{{else}}<span class="muted">—</span>{{end}}</td>
       <td class="num {{pctClass $d.Up24 .ID}}">{{pct $d.Up24 .ID}}</td>
       <td class="num {{pctClass $d.Up30 .ID}}">{{pct $d.Up30 .ID}}</td>
-      <td class="num">{{fmtMs .LastLatencyMs}}</td>
-      <td class="hide-sm">{{sparkline (index $d.Sparks .ID)}}</td>
-      <td class="muted small hide-sm">{{ago .LastCheckedAt}}</td>
+      <td class="hide-sm"><div class="hbars">{{range index $d.Bars .ID}}<span class="hb {{.Level}}" title="{{hourLabel .Day}} · {{if .Total}}{{pctVal .Uptime}}{{else}}sem dados{{end}}"></span>{{end}}</div></td>
     </tr>
     {{end}}
     </tbody>
   </table>
+  <p class="muted small no-results" hidden>Nenhum serviço corresponde aos filtros.</p>
   </div>
-</section>
-{{end}}
-
-{{if $d.Events}}
-<section class="card">
-  <h2>Eventos recentes (7 dias)</h2>
-  <ul class="events">
-  {{range $d.Events}}
-    <li>{{template "badge" .To}} <a href="/monitors/{{.MonitorID}}">{{.MonitorName}}</a> <span class="muted small">{{fmtTime .CreatedAt}} {{if ne (statusClass .To) "up"}}· duração {{between .CreatedAt .EndedAt}}{{end}}</span><div class="muted small">{{.Message}}</div></li>
   {{end}}
-  </ul>
 </section>
-{{end}}
+<script src="/static/chart.umd.min.js"></script>
 {{template "bottom" .}}

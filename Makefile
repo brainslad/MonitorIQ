@@ -19,7 +19,7 @@ dist: clean
 		name=monitoriq-$(VERSION)-linux-$$arch; dir=$(DIST)/$$name; \
 		mkdir -p $$dir/deploy; \
 		CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags "$(LDFLAGS)" -o $$dir/monitoriq ./cmd/monitoriq || exit 1; \
-		cp -r install.sh uninstall.sh README.md LICENSE VERSION $$dir/; cp -r deploy/* $$dir/deploy/; \
+		cp -r install.sh uninstall.sh README.md LICENSE NOTICE VERSION $$dir/; cp -r deploy/* $$dir/deploy/; \
 		tar -C $(DIST) -czf $(DIST)/$$name.tar.gz $$name; rm -rf $$dir; \
 		echo "$(DIST)/$$name.tar.gz"; \
 	done

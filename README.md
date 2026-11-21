@@ -5,7 +5,9 @@ Um único binário (Go) com dashboard, backoffice e status pages públicas, a gu
 
 *Self-hosted uptime & service monitoring for Rocky Linux 8/9/10: HTTP(S), ping, traceroute, DNS, SMTP, TLS certificate expiry and custom TCP ports, with a dashboard, an admin back-office and public status pages. Single Go binary + PostgreSQL. The UI is in Portuguese.*
 
-![Dashboard](docs/screenshots/dashboard.png)
+| Modo escuro | Modo claro |
+|---|---|
+| ![Dashboard escuro](docs/screenshots/dashboard.png) | ![Dashboard claro](docs/screenshots/dashboard-light.png) |
 
 ## Funcionalidades
 
@@ -19,7 +21,8 @@ Um único binário (Go) com dashboard, backoffice e status pages públicas, a gu
 | **Validade de certificado TLS** | Dias até expirar, cadeia e nome; aviso (degradado) quando faltam menos de N dias |
 | **Porta TCP personalizada** | Se a porta indicada aceita ligações e em quanto tempo |
 
-- **Dashboard** com resumo do estado, uptime 24h/30 dias, latência e gráfico das últimas 24h por serviço, e eventos recentes.
+- **Dashboard** com indicadores (serviços por estado, uptime médio, tempo de resposta, incidentes abertos), gráfico do tempo de resposta das últimas 24h, incidentes recentes e tabela de serviços com filtros por estado e tipo, pesquisa e barras de disponibilidade hora a hora.
+- **Modo escuro e modo claro**: segue o sistema por omissão e pode ser alternado no botão do topo (a escolha fica guardada no browser).
 - **Página de cada serviço** com uptime 24h/7d/30d/1 ano, gráfico de latência e disponibilidade de 1 hora a 2 anos, detalhes da última verificação (certificado, respostas DNS, saltos do traceroute…), eventos e histórico.
 - **Backoffice** para gerir hosts, serviços (intervalo, timeout, nº de falhas antes de marcar como em baixo, pausa), status pages, utilizadores e retenção.
 - **Status pages públicas** (`/status/<nome>`) com estado geral, barras de disponibilidade de 90 dias, incidentes dos últimos 14 dias, nomes públicos personalizados e API JSON (`/api/status/<nome>`). Podem ser incorporadas noutro site com `<iframe>`.
@@ -184,4 +187,6 @@ Publicar uma versão: `git tag v0.1.0 && git push --tags`. O workflow `.github/w
 
 ## Licença
 
-[MIT](LICENSE). Inclui [Chart.js](https://www.chartjs.org/) (MIT).
+[GNU GPL v3 ou posterior](LICENSE). Pode usar, modificar e redistribuir o MonitorIQ; versões modificadas que distribuir têm de manter a mesma licença e disponibilizar o código-fonte.
+
+Inclui [Chart.js](https://www.chartjs.org/) (MIT) e a fonte [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL OFL 1.1). Ver [NOTICE](NOTICE).
