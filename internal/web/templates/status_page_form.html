@@ -1,23 +1,23 @@
 {{template "top" .}}{{$p := .Data.P}}
-<div class="page-head"><h1>{{if $p.ID}}Editar status page{{else}}Nova status page{{end}}</h1>{{if $p.ID}}<div class="actions"><a class="btn" href="/status/{{$p.Slug}}" target="_blank" rel="noopener">Ver página</a></div>{{end}}</div>
+<div class="page-head"><h1>{{if $p.ID}}Edit status page{{else}}New status page{{end}}</h1>{{if $p.ID}}<div class="actions"><a class="btn" href="/status/{{$p.Slug}}" target="_blank" rel="noopener">View page</a></div>{{end}}</div>
 <form class="card form" method="post">
   {{template "csrf" .CSRF}}
   <div class="grid2">
-    <label>Título<input name="title" required value="{{$p.Title}}" placeholder="Estado dos serviços" data-slug-source></label>
-    <label>Endereço <span class="muted small">{{.Data.BaseURL}}/status/…</span><input name="slug" required value="{{$p.Slug}}" pattern="[a-z0-9][a-z0-9\-]{0,62}" placeholder="servicos" class="mono" data-slug-target></label>
+    <label>Title<input name="title" required value="{{$p.Title}}" placeholder="Service status" data-slug-source></label>
+    <label>Address <span class="muted small">{{.Data.BaseURL}}/status/…</span><input name="slug" required value="{{$p.Slug}}" pattern="[a-z0-9][a-z0-9\-]{0,62}" placeholder="status" class="mono" data-slug-target></label>
   </div>
-  <label>Descrição <span class="muted small">(opcional)</span><textarea name="description" rows="2">{{$p.Description}}</textarea></label>
-  <label class="check"><input type="checkbox" name="published" value="1" {{if $p.Published}}checked{{end}}> Publicada (visível sem login)</label>
+  <label>Description <span class="muted small">(optional)</span><textarea name="description" rows="2">{{$p.Description}}</textarea></label>
+  <label class="check"><input type="checkbox" name="published" value="1" {{if $p.Published}}checked{{end}}> Published (visible without login)</label>
 
-  <fieldset><legend>Serviços a mostrar</legend>
+  <fieldset><legend>Monitors to show</legend>
   {{if .Data.Options}}
-  <p class="muted small">Marque os serviços a incluir. Pode definir um nome público e a ordem (número menor aparece primeiro).</p>
+  <p class="muted small">Tick the monitors to include. You can set a public name and the order (lower numbers come first).</p>
   <div class="table-wrap"><table class="table compact">
-    <thead><tr><th></th><th>Serviço</th><th>Nome público</th><th class="num">Ordem</th></tr></thead>
+    <thead><tr><th></th><th>Monitor</th><th>Public name</th><th class="num">Order</th></tr></thead>
     <tbody>
     {{range $i, $o := .Data.Options}}
     <tr>
-      <td><input type="checkbox" name="monitor" value="{{$o.M.ID}}" {{if $o.Selected}}checked{{end}} aria-label="Incluir {{$o.M.Name}}"></td>
+      <td><input type="checkbox" name="monitor" value="{{$o.M.ID}}" {{if $o.Selected}}checked{{end}} aria-label="Include {{$o.M.Name}}"></td>
       <td>{{$o.M.HostName}} · <strong>{{$o.M.Name}}</strong> {{template "tbadge" $o.M.Type}}</td>
       <td><input name="name_{{$o.M.ID}}" value="{{$o.DisplayName}}" placeholder="{{$o.M.Name}}"></td>
       <td class="num"><input class="narrow" name="pos_{{$o.M.ID}}" type="number" value="{{add $i 1}}"></td>
@@ -25,8 +25,8 @@
     {{end}}
     </tbody>
   </table></div>
-  {{else}}<p class="muted">Crie primeiro alguns serviços.</p>{{end}}
+  {{else}}<p class="muted">Create some monitors first.</p>{{end}}
   </fieldset>
-  <div class="form-actions"><a class="btn ghost" href="/admin/status-pages">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
+  <div class="form-actions"><a class="btn ghost" href="/admin/status-pages">Cancel</a><button class="btn primary" type="submit">Save</button></div>
 </form>
 {{template "bottom" .}}

@@ -96,15 +96,15 @@ func (s *Server) loadPublic(r *http.Request) (*publicView, error) {
 	}
 	switch {
 	case active == 0:
-		v.Overall, v.Headline = checks.Unknown, "Sem serviços monitorizados"
+		v.Overall, v.Headline = checks.Unknown, "No monitored services"
 	case down > 0 && down == active:
-		v.Overall, v.Headline = checks.Down, "Interrupção grave de serviço"
+		v.Overall, v.Headline = checks.Down, "Major outage"
 	case down > 0:
-		v.Overall, v.Headline = checks.Down, "Interrupção parcial de serviço"
+		v.Overall, v.Headline = checks.Down, "Partial outage"
 	case degraded > 0:
-		v.Overall, v.Headline = checks.Degraded, "Alguns serviços com desempenho degradado"
+		v.Overall, v.Headline = checks.Degraded, "Degraded performance"
 	default:
-		v.Overall, v.Headline = checks.Up, "Todos os sistemas operacionais"
+		v.Overall, v.Headline = checks.Up, "All systems operational"
 	}
 	if len(eventIDs) > 0 {
 		evs, err := s.Store.ListEvents(ctx, eventIDs, time.Now().AddDate(0, 0, -14), 50)
@@ -130,7 +130,7 @@ func (s *Server) loadPublic(r *http.Request) (*publicView, error) {
 func (s *Server) handlePublicStatus(w http.ResponseWriter, r *http.Request) {
 	v, err := s.loadPublic(r)
 	if errors.Is(err, store.ErrNotFound) {
-		s.renderStatus(w, r, http.StatusNotFound, "notfound", &page{Title: "Página não encontrada"})
+		s.renderStatus(w, r, http.StatusNotFound, "notfound", &page{Title: "Page not found"})
 		return
 	} else if err != nil {
 		s.serverError(w, err)

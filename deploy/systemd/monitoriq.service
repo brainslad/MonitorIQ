@@ -1,5 +1,5 @@
 [Unit]
-Description=MonitorIQ - monitorização de uptime e serviços
+Description=MonitorIQ - uptime and service monitoring
 Documentation=https://github.com/brainslad/monitoriq
 After=network-online.target postgresql.service
 Wants=network-online.target
@@ -14,11 +14,11 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
 
-# ping (ICMP) precisa de CAP_NET_RAW; CAP_NET_BIND_SERVICE permite escutar em portas < 1024.
+# ping (ICMP) needs CAP_NET_RAW; CAP_NET_BIND_SERVICE allows listening on ports < 1024.
 AmbientCapabilities=CAP_NET_RAW CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_BIND_SERVICE
 
-# Endurecimento
+# Hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

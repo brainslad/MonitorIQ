@@ -1,22 +1,22 @@
 {{template "top" .}}{{$csrf := .CSRF}}
-<div class="page-head"><h1>Serviços <span class="muted">({{.Data.Total}})</span></h1><div class="actions"><a class="btn primary" href="/admin/monitors/new">+ Novo serviço</a></div></div>
+<div class="page-head"><h1>Monitors <span class="muted">({{.Data.Total}})</span></h1><div class="actions"><a class="btn primary" href="/admin/monitors/new">+ New monitor</a></div></div>
 {{range .Data.Groups}}
 <section class="card group">
   <div class="group-head"><h2>{{.HostName}}</h2><span class="muted mono">{{.Address}}</span></div>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>Estado</th><th>Nome</th><th>Tipo</th><th class="hide-sm">Alvo</th><th class="num hide-sm">Intervalo</th><th></th></tr></thead>
+    <thead><tr><th>Status</th><th>Name</th><th>Type</th><th class="hide-sm">Target</th><th class="num hide-sm">Interval</th><th></th></tr></thead>
     <tbody>
     {{range .Monitors}}
     <tr class="{{if not .Enabled}}paused{{end}}">
-      <td class="nowrap">{{if .Enabled}}{{template "stext" .Status}}{{else}}<span class="stext"><span class="dot unknown"></span>Pausado</span>{{end}}</td>
+      <td class="nowrap">{{if .Enabled}}{{template "stext" .Status}}{{else}}<span class="stext"><span class="dot unknown"></span>Paused</span>{{end}}</td>
       <td><a class="mon-name" href="/monitors/{{.ID}}">{{.Name}}</a></td>
       <td>{{template "tbadge" .Type}}</td>
       <td class="mono small hide-sm">{{.EffectiveTarget}}{{if .Port}}:{{.Port}}{{end}}</td>
       <td class="num hide-sm">{{.IntervalSeconds}}s</td>
       <td class="row-actions">
-        <form method="post" action="/admin/monitors/{{.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/admin/monitors"><button class="btn small">{{if .Enabled}}Pausar{{else}}Retomar{{end}}</button></form>
-        <a class="btn small" href="/admin/monitors/{{.ID}}/edit">Editar</a>
-        <form method="post" action="/admin/monitors/{{.ID}}/delete" data-confirm="Apagar o serviço {{.Name}} e todo o seu histórico?">{{template "csrf" $csrf}}<button class="btn small danger">Apagar</button></form>
+        <form method="post" action="/admin/monitors/{{.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/admin/monitors"><button class="btn small">{{if .Enabled}}Pause{{else}}Resume{{end}}</button></form>
+        <a class="btn small" href="/admin/monitors/{{.ID}}/edit">Edit</a>
+        <form method="post" action="/admin/monitors/{{.ID}}/delete" data-confirm="Delete monitor {{.Name}} and all its history?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
       </td>
     </tr>
     {{end}}
@@ -24,6 +24,6 @@
   </table></div>
 </section>
 {{else}}
-<div class="card empty"><p>Ainda não existem serviços. <a href="/admin/monitors/new">Criar o primeiro</a>.</p></div>
+<div class="card empty"><p>No monitors yet. <a href="/admin/monitors/new">Create the first one</a>.</p></div>
 {{end}}
 {{template "bottom" .}}

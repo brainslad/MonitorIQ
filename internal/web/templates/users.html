@@ -1,34 +1,34 @@
 {{template "top" .}}{{$csrf := .CSRF}}{{$me := .User}}
-<div class="page-head"><h1>Utilizadores</h1></div>
+<div class="page-head"><h1>Users</h1></div>
 <div class="grid2">
 <section class="card">
-  <h2>Contas com acesso ao backoffice</h2>
+  <h2>Accounts with back-office access</h2>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>Utilizador</th><th>Último login</th><th></th></tr></thead>
+    <thead><tr><th>Username</th><th>Last login</th><th></th></tr></thead>
     <tbody>
     {{range .Data.Users}}
-    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(você)</span>{{end}}</td><td class="small muted">{{fmtTime .LastLoginAt}}</td>
-    <td class="row-actions">{{if not (eq64 .ID $me.ID)}}<form method="post" action="/admin/users/{{.ID}}/delete" data-confirm="Apagar o utilizador {{.Username}}?">{{template "csrf" $csrf}}<button class="btn small danger">Apagar</button></form>{{end}}</td></tr>
+    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}</td><td class="small muted">{{fmtTime .LastLoginAt}}</td>
+    <td class="row-actions">{{if not (eq64 .ID $me.ID)}}<form method="post" action="/admin/users/{{.ID}}/delete" data-confirm="Delete user {{.Username}}?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>{{end}}</td></tr>
     {{end}}
     </tbody>
   </table></div>
 </section>
 <div>
 <form class="card form" method="post" action="/admin/users">
-  <h2>Novo utilizador</h2>
+  <h2>New user</h2>
   {{template "csrf" $csrf}}
-  <label>Utilizador<input name="username" required autocomplete="off"></label>
-  <label>Palavra-passe <span class="muted small">(mín. 8 caracteres)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
-  <label>Repetir palavra-passe<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
-  <div class="form-actions"><button class="btn primary">Criar</button></div>
+  <label>Username<input name="username" required autocomplete="off"></label>
+  <label>Password <span class="muted small">(min. 8 characters)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <label>Repeat password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
+  <div class="form-actions"><button class="btn primary">Create</button></div>
 </form>
 <form class="card form" method="post" action="/admin/account/password">
-  <h2>Alterar a minha palavra-passe</h2>
+  <h2>Change my password</h2>
   {{template "csrf" $csrf}}
-  <label>Palavra-passe atual<input name="current" type="password" required autocomplete="current-password"></label>
-  <label>Nova palavra-passe<input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
-  <label>Repetir nova palavra-passe<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
-  <div class="form-actions"><button class="btn primary">Alterar</button></div>
+  <label>Current password<input name="current" type="password" required autocomplete="current-password"></label>
+  <label>New password<input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <label>Repeat new password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
+  <div class="form-actions"><button class="btn primary">Change</button></div>
 </form>
 </div>
 </div>

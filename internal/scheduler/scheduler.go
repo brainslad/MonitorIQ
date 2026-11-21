@@ -44,7 +44,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 		due, err := s.Store.DueMonitors(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
-				s.Log.Error("erro ao obter monitores", "err", err)
+				s.Log.Error("failed to load monitors", "err", err)
 			}
 			continue
 		}
@@ -92,12 +92,12 @@ func (s *Scheduler) runOne(ctx context.Context, m *store.Monitor) {
 	defer cancel()
 	tr, err := s.Store.RecordResult(sctx, m, res, at)
 	if err != nil {
-		s.Log.Error("erro ao gravar resultado", "monitor", m.ID, "err", err)
+		s.Log.Error("failed to save result", "monitor", m.ID, "err", err)
 		return
 	}
 	if tr != nil {
-		s.Log.Info("mudança de estado", "monitor", m.Name, "id", m.ID,
-			"de", tr.From.String(), "para", tr.To.String(), "mensagem", tr.Message)
+		s.Log.Info("status change", "monitor", m.Name, "id", m.ID,
+			"from", tr.From.String(), "to", tr.To.String(), "message", tr.Message)
 	}
 }
 
@@ -106,12 +106,12 @@ func (s *Scheduler) maintenanceLoop(ctx context.Context) {
 		st, err := s.Store.Purge(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
-				s.Log.Error("erro na limpeza de retenção", "err", err)
+				s.Log.Error("retention cleanup failed", "err", err)
 			}
 			return
 		}
 		if st.Results+st.Hourly+st.Events > 0 {
-			s.Log.Info("limpeza de retenção", "resultados", st.Results, "agregados", st.Hourly, "eventos", st.Events)
+			s.Log.Info("retention cleanup", "results", st.Results, "aggregates", st.Hourly, "events", st.Events)
 		}
 	}
 	select {

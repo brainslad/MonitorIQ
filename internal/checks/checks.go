@@ -32,17 +32,17 @@ func (s Status) String() string {
 	}
 }
 
-// Label returns a Portuguese human label for the status.
+// Label returns a human label for the status.
 func (s Status) Label() string {
 	switch s {
 	case Up:
-		return "Operacional"
+		return "Operational"
 	case Degraded:
-		return "Degradado"
+		return "Degraded"
 	case Down:
-		return "Em baixo"
+		return "Down"
 	default:
-		return "Desconhecido"
+		return "Unknown"
 	}
 }
 
@@ -67,13 +67,13 @@ type TypeInfo struct {
 
 // Types lists all supported monitor types in display order.
 var Types = []TypeInfo{
-	{TypeHTTP, "Website HTTP/HTTPS", 0, "https://exemplo.pt/"},
-	{TypePing, "Ping (ICMP)", 0, "exemplo.pt ou 192.0.2.10"},
-	{TypeTraceroute, "Traceroute", 0, "exemplo.pt"},
-	{TypeDNS, "DNS", 53, "nome a resolver, ex.: exemplo.pt"},
-	{TypeSMTP, "SMTP", 25, "mail.exemplo.pt"},
-	{TypeTLS, "Validade de certificado TLS", 443, "exemplo.pt"},
-	{TypeTCP, "Porta TCP personalizada", 0, "exemplo.pt"},
+	{TypeHTTP, "Website HTTP/HTTPS", 0, "https://example.com/"},
+	{TypePing, "Ping (ICMP)", 0, "example.com or 192.0.2.10"},
+	{TypeTraceroute, "Traceroute", 0, "example.com"},
+	{TypeDNS, "DNS", 53, "name to resolve, e.g. example.com"},
+	{TypeSMTP, "SMTP", 25, "mail.example.com"},
+	{TypeTLS, "TLS certificate expiry", 443, "example.com"},
+	{TypeTCP, "Custom TCP port", 0, "example.com"},
 }
 
 // TypeLabel returns the display label for a type key.
@@ -156,7 +156,7 @@ func Run(ctx context.Context, m Monitor) (res Result) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			res = down("erro interno: %v", r)
+			res = down("internal error: %v", r)
 		}
 	}()
 	switch m.Type {
@@ -175,6 +175,6 @@ func Run(ctx context.Context, m Monitor) (res Result) {
 	case TypeTCP:
 		return checkTCP(ctx, m)
 	default:
-		return down("tipo de monitor desconhecido: %s", m.Type)
+		return down("unknown monitor type: %s", m.Type)
 	}
 }

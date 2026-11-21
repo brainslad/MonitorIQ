@@ -60,9 +60,9 @@ func env(key, def string) string {
 func envBool(key string, def bool) bool {
 	v := strings.ToLower(env(key, ""))
 	switch v {
-	case "1", "true", "yes", "on", "sim":
+	case "1", "true", "yes", "on":
 		return true
-	case "0", "false", "no", "off", "nao", "não":
+	case "0", "false", "no", "off":
 		return false
 	}
 	return def
@@ -80,11 +80,11 @@ func Load() (*Config, error) {
 	}
 	n, err := strconv.Atoi(env("MONITORIQ_MAX_CONCURRENCY", "50"))
 	if err != nil || n < 1 {
-		return nil, fmt.Errorf("MONITORIQ_MAX_CONCURRENCY inválido")
+		return nil, fmt.Errorf("invalid MONITORIQ_MAX_CONCURRENCY")
 	}
 	c.MaxConcurrency = n
 	if c.DatabaseURL == "" {
-		return nil, fmt.Errorf("MONITORIQ_DATABASE_URL não definido")
+		return nil, fmt.Errorf("MONITORIQ_DATABASE_URL is not set")
 	}
 	return c, nil
 }

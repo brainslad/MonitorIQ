@@ -75,7 +75,7 @@ func TestHTTPSAndTLS(t *testing.T) {
 	defer srv.Close()
 	// Self-signed: verification fails unless ignored.
 	r := Run(context.Background(), Monitor{Type: TypeHTTP, Target: srv.URL, Timeout: 2 * time.Second})
-	if r.Status != Down || !strings.Contains(r.Message, "Certificado") {
+	if r.Status != Down || !strings.Contains(r.Message, "certificate") {
 		t.Fatalf("expected cert failure: %+v", r)
 	}
 	r = Run(context.Background(), Monitor{Type: TypeHTTP, Target: srv.URL, Timeout: 2 * time.Second, Config: Config{IgnoreTLSErrors: true}})
@@ -100,7 +100,7 @@ func TestEvaluateCert(t *testing.T) {
 		t.Fatalf("untrusted cert should be down: %+v", r)
 	}
 	r = evaluateCert([]*x509.Certificate{leaf}, "example.com", 14, time.Millisecond, leaf.NotAfter.Add(time.Hour))
-	if r.Status != Down || !strings.Contains(r.Message, "expirou") {
+	if r.Status != Down || !strings.Contains(r.Message, "expired") {
 		t.Fatalf("expired: %+v", r)
 	}
 }
@@ -249,7 +249,7 @@ func TestHostPort(t *testing.T) {
 
 func TestPingRejectsOptionInjection(t *testing.T) {
 	r := Run(context.Background(), Monitor{Type: TypePing, Target: "-f", Timeout: time.Second})
-	if r.Status != Down || !strings.Contains(r.Message, "inválido") {
+	if r.Status != Down || !strings.Contains(r.Message, "invalid") {
 		t.Fatalf("expected rejection: %+v", r)
 	}
 }

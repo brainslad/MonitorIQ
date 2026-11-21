@@ -303,10 +303,10 @@ func (s *Store) SaveStatusPage(ctx context.Context, p *StatusPage) error {
 	p.Slug = strings.ToLower(strings.TrimSpace(p.Slug))
 	p.Title = strings.TrimSpace(p.Title)
 	if p.Title == "" {
-		return errors.New("o título é obrigatório")
+		return errors.New("title is required")
 	}
 	if !slugRe.MatchString(p.Slug) {
-		return errors.New("o endereço (slug) só pode ter letras minúsculas, números e hífens")
+		return errors.New("the address (slug) may only contain lowercase letters, digits and hyphens")
 	}
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
@@ -322,7 +322,7 @@ func (s *Store) SaveStatusPage(ctx context.Context, p *StatusPage) error {
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "status_pages_slug_key") {
-			return errors.New("já existe uma status page com esse endereço")
+			return errors.New("a status page with that address already exists")
 		}
 		return err
 	}

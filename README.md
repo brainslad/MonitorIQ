@@ -1,164 +1,171 @@
 # MonitorIQ
 
-Sistema de monitorização de uptime e serviços, auto-alojado, para **Rocky Linux 8, 9 e 10**.
-Um único binário (Go) com dashboard, backoffice e status pages públicas, a guardar os dados em **PostgreSQL** com retenção configurável até **2 anos**.
+**Know before your users do.**
 
-*Self-hosted uptime & service monitoring for Rocky Linux 8/9/10: HTTP(S), ping, traceroute, DNS, SMTP, TLS certificate expiry and custom TCP ports, with a dashboard, an admin back-office and public status pages. Single Go binary + PostgreSQL. The UI is in Portuguese.*
+Self-hosted uptime and service monitoring for **Rocky Linux 8, 9 and 10**.
+A single Go binary with a dashboard, an admin back-office and public status pages, storing its data in **PostgreSQL** with configurable retention of up to **2 years**.
 
-| Modo escuro | Modo claro |
+| Dark mode | Light mode |
 |---|---|
-| ![Dashboard escuro](docs/screenshots/dashboard.png) | ![Dashboard claro](docs/screenshots/dashboard-light.png) |
+| ![Dashboard, dark](docs/screenshots/dashboard.png) | ![Dashboard, light](docs/screenshots/dashboard-light.png) |
 
-## Funcionalidades
+## Features
 
-| Verificação | O que confirma |
+| Check | What it verifies |
 |---|---|
-| **Website HTTP/HTTPS** | Código de resposta (ex.: `200-399`), palavra-chave presente/ausente, tempo de resposta (estado *degradado* acima de um limite), certificado válido, redirecionamentos |
-| **Ping (ICMP)** | Perda de pacotes e RTT mín./médio/máx. (perda parcial = degradado) |
-| **Traceroute** | Se o destino é alcançado, número de saltos e RTT de cada salto (UDP ou ICMP) |
-| **DNS** | Registos A, AAAA, CNAME, MX, TXT e NS, com servidor DNS opcional e valor esperado |
-| **SMTP** | Banner 220, EHLO, STARTTLS ou TLS implícito (465) |
-| **Validade de certificado TLS** | Dias até expirar, cadeia e nome; aviso (degradado) quando faltam menos de N dias |
-| **Porta TCP personalizada** | Se a porta indicada aceita ligações e em quanto tempo |
+| **HTTP/HTTPS website** | Status code (e.g. `200-399`), keyword present/absent, response time (*degraded* above a threshold), valid certificate, redirects |
+| **Ping (ICMP)** | Packet loss and min/avg/max RTT (partial loss = degraded) |
+| **Traceroute** | Whether the destination is reached, hop count and RTT per hop (UDP or ICMP) |
+| **DNS** | A, AAAA, CNAME, MX, TXT and NS records, with optional DNS server and expected value |
+| **SMTP** | 220 banner, EHLO, STARTTLS or implicit TLS (465) |
+| **TLS certificate expiry** | Days until expiry, chain and hostname; warns (degraded) when fewer than N days remain |
+| **Custom TCP port** | Whether the port accepts connections and how fast |
 
-- **Dashboard** com indicadores (serviços por estado, uptime médio, tempo de resposta, incidentes abertos), gráfico do tempo de resposta das últimas 24h, incidentes recentes e tabela de serviços com filtros por estado e tipo, pesquisa e barras de disponibilidade hora a hora.
-- **Modo escuro e modo claro**: segue o sistema por omissão e pode ser alternado no botão do topo (a escolha fica guardada no browser).
-- **Página de cada serviço** com uptime 24h/7d/30d/1 ano, gráfico de latência e disponibilidade de 1 hora a 2 anos, detalhes da última verificação (certificado, respostas DNS, saltos do traceroute…), eventos e histórico.
-- **Backoffice** para gerir hosts, serviços (intervalo, timeout, nº de falhas antes de marcar como em baixo, pausa), status pages, utilizadores e retenção.
-- **Status pages públicas** (`/status/<nome>`) com estado geral, barras de disponibilidade de 90 dias, incidentes dos últimos 14 dias, nomes públicos personalizados e API JSON (`/api/status/<nome>`). Podem ser incorporadas noutro site com `<iframe>`.
-- **Retenção** configurável por tipo de dado, com limite rígido de 730 dias:
-  - resultados detalhados de cada verificação (predefinido 90 dias);
-  - agregados horários usados nos gráficos e no uptime de longo prazo (predefinido 730 dias);
-  - eventos/incidentes (predefinido 730 dias).
-  A limpeza corre automaticamente de hora a hora.
-- Segurança: palavras-passe com bcrypt, sessões no servidor, proteção CSRF, limite de tentativas de login, cabeçalhos CSP, serviço systemd endurecido e utilizador sem privilégios.
+- **Dashboard** with KPIs (monitors by status, average uptime, response time, open incidents), a 24-hour response-time chart, recent incidents and a monitor table with status/type filters, search and hour-by-hour availability bars.
+- **Dark and light mode**: follows the operating system by default and can be toggled from the top bar (the choice is remembered in the browser).
+- **Monitor page** with 24h/7d/30d/1-year uptime, a latency and availability chart from 1 hour to 2 years, last-check details (certificate, DNS answers, traceroute hops…), events and history.
+- **Back-office** to manage hosts, monitors (interval, timeout, failures before alerting, pause), status pages, users and retention.
+- **Public status pages** (`/status/<name>`) with overall status, 90-day availability bars, incidents from the last 14 days, custom public names and a JSON API (`/api/status/<name>`). They can be embedded in another site with an `<iframe>`.
+- **Retention** configurable per data type, with a hard limit of 730 days:
+  - raw results of every check (default 90 days);
+  - hourly aggregates used by charts and long-term uptime (default 730 days);
+  - events/incidents (default 730 days).
+  Cleanup runs automatically every hour.
+- **Security**: bcrypt passwords, server-side sessions, CSRF protection, login rate limiting, CSP headers, a hardened systemd unit and an unprivileged service user.
 
-| Serviço | Status page pública |
+| Monitor | Public status page |
 |---|---|
-| ![Serviço](docs/screenshots/monitor.png) | ![Status page](docs/screenshots/status.png) |
+| ![Monitor](docs/screenshots/monitor.png) | ![Status page](docs/screenshots/status.png) |
 
-## Instalação rápida (Rocky Linux 8 / 9 / 10)
+## Quick install (Rocky Linux 8 / 9 / 10)
 
-### Opção A: pacote de release (recomendado)
+### Option A: release package (recommended)
 
 ```bash
-# Substitua vX.Y.Z pela versão mais recente em https://github.com/brainslad/monitoriq/releases
+# Replace vX.Y.Z with the latest version from https://github.com/brainslad/monitoriq/releases
 curl -LO https://github.com/brainslad/monitoriq/releases/download/vX.Y.Z/monitoriq-vX.Y.Z-linux-amd64.tar.gz
 tar xzf monitoriq-vX.Y.Z-linux-amd64.tar.gz
 cd monitoriq-vX.Y.Z-linux-amd64
 sudo ./install.sh --open-firewall
 ```
 
-### Opção B: a partir do código fonte
+### Option B: from source
 
 ```bash
 sudo dnf install -y git
 git clone https://github.com/brainslad/monitoriq.git
 cd monitoriq
-sudo ./install.sh --open-firewall      # instala o Go (golang) e compila automaticamente
+sudo ./install.sh --open-firewall      # installs Go (golang) and builds automatically
 ```
 
-No fim, o instalador mostra o endereço e a palavra-passe inicial do utilizador `admin`:
+When it finishes, the installer prints the URL and the initial password of the `admin` user:
 
 ```
-MonitorIQ instalado com sucesso.
-  Endereço:      http://192.0.2.10:8080
-  Utilizador:    admin
-  Palavra-passe: 9fK2…   (altere-a em Utilizadores após o primeiro login)
+MonitorIQ installed successfully.
+  URL:           http://192.0.2.10:8080
+  Username:      admin
+  Password:      9fK2…   (change it under Users after the first login)
 ```
 
-### O que o instalador faz
+### What the installer does
 
-1. Instala `iputils` e `traceroute`.
-2. Instala o PostgreSQL (stream 16 em EL8/EL9 via módulos dnf; pacote nativo em EL10), inicializa-o, cria a base de dados e o utilizador `monitoriq` com uma palavra-passe aleatória e ativa autenticação `scram-sha-256` em localhost.
-3. Usa o binário do pacote ou compila-o (Go ≥ 1.22).
-4. Cria o utilizador de sistema `monitoriq`, instala `/usr/local/bin/monitoriq`, escreve `/etc/monitoriq/monitoriq.env` e o serviço `monitoriq.service`.
-5. Aplica as migrações da base de dados, cria o utilizador `admin` e arranca o serviço.
+1. Installs `iputils` and `traceroute`.
+2. Installs PostgreSQL (stream 16 on EL8/EL9 via dnf modules; native package on EL10), initialises it, creates the `monitoriq` database and role with a random password and enables `scram-sha-256` authentication on localhost.
+3. Uses the bundled binary or builds it (Go ≥ 1.22).
+4. Creates the `monitoriq` system user, installs `/usr/local/bin/monitoriq`, writes `/etc/monitoriq/monitoriq.env` and the `monitoriq.service` unit.
+5. Applies database migrations, creates the `admin` user and starts the service.
 
-Opções do instalador:
+Installer options:
 
-| Opção | Descrição |
+| Option | Description |
 |---|---|
-| `--listen 0.0.0.0:8080` | Endereço e porta do servidor web |
-| `--base-url https://status.exemplo.pt` | URL público (links das status pages) |
-| `--open-firewall` | Abre a porta no firewalld |
-| `--db-url postgres://…` | Usa um PostgreSQL existente em vez de instalar um local |
-| `--pg-version 15` | Versão do PostgreSQL a instalar (predefinido 16) |
-| `--build` | Compila a partir do código mesmo que exista binário |
+| `--listen 0.0.0.0:8080` | Web server address and port |
+| `--base-url https://status.example.com` | Public URL (used in status page links) |
+| `--open-firewall` | Opens the port in firewalld |
+| `--db-url postgres://…` | Use an existing PostgreSQL instead of installing a local one |
+| `--pg-version 15` | PostgreSQL version to install (default 16) |
+| `--build` | Build from source even if a binary is present |
 
-**Atualizar:** descarregue a nova versão e volte a executar `sudo ./install.sh`. A configuração e os dados são mantidos e as migrações são aplicadas automaticamente.
+**Upgrade:** download the new version and run `sudo ./install.sh` again. Configuration and data are kept and migrations are applied automatically.
 
-**Remover:** `sudo ./uninstall.sh` (mantém dados) ou `sudo ./uninstall.sh --purge` (apaga a base de dados e a configuração).
+**Uninstall:** `sudo ./uninstall.sh` (keeps data) or `sudo ./uninstall.sh --purge` (deletes the database and configuration).
 
-## Utilização
+## Usage
 
-1. Entre em `http://<servidor>:8080` com o utilizador `admin`.
-2. **Hosts → Novo host**: indique um nome e o endereço (hostname ou IP).
-3. Adicione os **serviços** desse host. O campo *Alvo* é opcional: se ficar vazio usa o endereço do host (para HTTP é usado `https://<endereço>`). A *Porta* 0 usa a predefinida do tipo (443 para TLS, 25 para SMTP, 53 para DNS).
-4. **Falhas antes de alertar**: com o valor 1, o serviço só passa a *Em baixo* após 2 falhas seguidas, evitando falsos alarmes.
-5. **Status pages → Nova**: escolha os serviços, os nomes públicos e a ordem. A página fica em `/status/<endereço>`.
+1. Open `http://<server>:8080` and sign in as `admin`.
+2. **Hosts → New host**: enter a name and the address (hostname or IP).
+3. Add **monitors** to that host. *Target* is optional: when empty the host address is used (for HTTP, `https://<address>`). *Port* 0 uses the type's default (443 for TLS, 25 for SMTP, 53 for DNS).
+4. **Failures before alerting**: with 1, a monitor only turns *Down* after 2 consecutive failures, avoiding false alarms.
+5. **Status pages → New**: pick the monitors, their public names and order. The page is served at `/status/<address>`.
 
-### Estados
+### Statuses
 
-- **Operacional**: a verificação passou.
-- **Degradado**: funciona mas com problemas (resposta lenta, perda parcial de pacotes, certificado prestes a expirar). Conta como disponível no uptime.
-- **Em baixo**: a verificação falhou o número de vezes configurado.
-- **Desconhecido**: ainda não verificado ou pausado.
+- **Operational**: the check passed.
+- **Degraded**: working but with problems (slow response, partial packet loss, certificate about to expire). Counts as available for uptime.
+- **Down**: the check failed the configured number of times.
+- **Unknown**: not checked yet, or paused.
 
-### Linha de comandos
+### Authentication
+
+The dashboard and back-office require a username and password. Status pages and their JSON API are public.
+Sessions last 7 days and are stored in the database; cookies are HttpOnly, SameSite=Lax and Secure under HTTPS.
+After 10 failed attempts an IP is blocked for 15 minutes. To reset a password on the server:
 
 ```bash
-monitoriq serve                                # servidor (usado pelo systemd)
-monitoriq migrate                              # aplica migrações
-monitoriq user set admin                       # cria utilizador / redefine palavra-passe
+sudo -u monitoriq monitoriq --env /etc/monitoriq/monitoriq.env user set admin
+```
+
+### Command line
+
+```bash
+monitoriq serve                                # server (used by systemd)
+monitoriq migrate                              # apply migrations
+monitoriq user set admin                       # create a user / reset its password
 monitoriq user list
-monitoriq check http https://exemplo.pt        # verificação pontual, útil para diagnóstico
-monitoriq check tls exemplo.pt
-monitoriq check dns exemplo.pt --config '{"record_type":"MX"}'
-monitoriq check smtp mail.exemplo.pt 587 --config '{"smtp_tls":"starttls"}'
-monitoriq check tcp exemplo.pt 3306
+monitoriq check http https://example.com       # one-off check, handy for diagnostics
+monitoriq check tls example.com
+monitoriq check dns example.com --config '{"record_type":"MX"}'
+monitoriq check smtp mail.example.com 587 --config '{"smtp_tls":"starttls"}'
+monitoriq check tcp example.com 3306
 monitoriq version
 ```
 
-Para usar o comando no servidor com a configuração instalada:
-`sudo -u monitoriq monitoriq --env /etc/monitoriq/monitoriq.env user set admin`
+## Configuration
 
-## Configuração
+File `/etc/monitoriq/monitoriq.env` (see [`deploy/monitoriq.env.example`](deploy/monitoriq.env.example)):
 
-Ficheiro `/etc/monitoriq/monitoriq.env` (ver [`deploy/monitoriq.env.example`](deploy/monitoriq.env.example)):
-
-| Variável | Predefinição | Descrição |
+| Variable | Default | Description |
 |---|---|---|
-| `MONITORIQ_DATABASE_URL` | — | Ligação ao PostgreSQL |
-| `MONITORIQ_LISTEN` | `127.0.0.1:8080` | Endereço do servidor web |
-| `MONITORIQ_BASE_URL` | — | URL público, ex.: `https://status.exemplo.pt` |
-| `MONITORIQ_TRUST_PROXY` | `false` | Confiar em `X-Forwarded-For`/`-Proto` (atrás de nginx) |
-| `MONITORIQ_COOKIE_SECURE` | automático | Cookies só por HTTPS |
-| `MONITORIQ_MAX_CONCURRENCY` | `50` | Verificações em simultâneo |
-| `MONITORIQ_DEBUG` | — | `1` regista cada pedido HTTP |
+| `MONITORIQ_DATABASE_URL` | — | PostgreSQL connection |
+| `MONITORIQ_LISTEN` | `127.0.0.1:8080` | Web server address |
+| `MONITORIQ_BASE_URL` | — | Public URL, e.g. `https://status.example.com` |
+| `MONITORIQ_TRUST_PROXY` | `false` | Trust `X-Forwarded-For`/`-Proto` (behind nginx) |
+| `MONITORIQ_COOKIE_SECURE` | automatic | HTTPS-only cookies |
+| `MONITORIQ_MAX_CONCURRENCY` | `50` | Concurrent checks |
+| `MONITORIQ_DEBUG` | — | `1` logs every HTTP request |
 
-Depois de alterar: `sudo systemctl restart monitoriq`.
+After changing it: `sudo systemctl restart monitoriq`.
 
-### HTTPS com nginx
+### HTTPS with nginx
 
-Recomenda-se publicar o MonitorIQ atrás de nginx com certificado Let's Encrypt. Os passos estão em [`deploy/nginx/monitoriq.conf`](deploy/nginx/monitoriq.conf). Em resumo: `MONITORIQ_LISTEN=127.0.0.1:8080`, `MONITORIQ_TRUST_PROXY=true`, `setsebool -P httpd_can_network_connect 1` e `certbot --nginx`.
+Running MonitorIQ behind nginx with a Let's Encrypt certificate is recommended. The steps are in [`deploy/nginx/monitoriq.conf`](deploy/nginx/monitoriq.conf). In short: `MONITORIQ_LISTEN=127.0.0.1:8080`, `MONITORIQ_TRUST_PROXY=true`, `setsebool -P httpd_can_network_connect 1` and `certbot --nginx`.
 
-## Base de dados e retenção
+## Database and retention
 
-- Cada verificação grava um resultado detalhado em `check_results` e atualiza de forma incremental um agregado por hora em `check_results_hourly`.
-- Gráficos até 48h usam os resultados detalhados; até 120 dias usam os agregados horários; acima disso agregados diários. Assim é possível manter **2 anos** de histórico com pouco espaço: um serviço verificado a cada minuto ocupa cerca de 17 500 linhas horárias em 2 anos, contra mais de 1 milhão de resultados detalhados.
-- Os períodos são definidos em **Definições** (1 a 730 dias). O limite de 2 anos é imposto na interface e na base de dados.
+- Every check stores a raw result in `check_results` and incrementally updates an hourly aggregate in `check_results_hourly`.
+- Charts up to 48h use raw results; up to 120 days hourly aggregates; beyond that daily aggregates. This keeps **2 years** of history cheap: a monitor checked every minute uses about 17,500 hourly rows over 2 years, versus over 1 million raw results.
+- Periods are set under **Settings** (1 to 730 days). The 2-year limit is enforced in the UI and in the database.
 
-**Cópia de segurança:**
+**Backup:**
 
 ```bash
 sudo -u postgres pg_dump -Fc monitoriq > monitoriq-$(date +%F).dump
-# restauro: sudo -u postgres pg_restore -d monitoriq --clean monitoriq-AAAA-MM-DD.dump
+# restore: sudo -u postgres pg_restore -d monitoriq --clean monitoriq-YYYY-MM-DD.dump
 ```
 
-## Desenvolvimento
+## Development
 
-Requisitos: Go ≥ 1.22 e PostgreSQL ≥ 12.
+Requirements: Go ≥ 1.22 and PostgreSQL ≥ 12.
 
 ```bash
 createdb monitoriq
@@ -167,26 +174,26 @@ MONITORIQ_DATABASE_URL=postgres://localhost/monitoriq?sslmode=disable
 MONITORIQ_LISTEN=127.0.0.1:8080
 EOF
 make test
-make run                 # http://127.0.0.1:8080 — sem utilizadores, é criado 'admin' e a palavra-passe aparece no log
-make dist VERSION=v0.1.0 # gera dist/monitoriq-v0.1.0-linux-{amd64,arm64}.tar.gz
+make run                 # http://127.0.0.1:8080 — with no users, 'admin' is created and its password is logged
+make dist VERSION=v0.1.0 # builds dist/monitoriq-v0.1.0-linux-{amd64,arm64}.tar.gz
 ```
 
-Estrutura:
+Layout:
 
 ```
-cmd/monitoriq/          ponto de entrada e linha de comandos
-internal/checks/        verificações (http, ping, traceroute, dns, smtp, tls, tcp)
-internal/scheduler/     agendador concorrente e limpeza de retenção
-internal/store/         PostgreSQL: migrações, consultas, agregados
-internal/web/           servidor HTTP, templates, CSS/JS (embutidos no binário)
-deploy/                 unidade systemd, exemplo de configuração e nginx
-install.sh              instalador para Rocky Linux 8/9/10
+cmd/monitoriq/          entry point and command line
+internal/checks/        checks (http, ping, traceroute, dns, smtp, tls, tcp)
+internal/scheduler/     concurrent scheduler and retention cleanup
+internal/store/         PostgreSQL: migrations, queries, aggregates
+internal/web/           HTTP server, templates, CSS/JS (embedded in the binary)
+deploy/                 systemd unit, example configuration and nginx
+install.sh              installer for Rocky Linux 8/9/10
 ```
 
-Publicar uma versão: `git tag v0.1.0 && git push --tags`. O workflow `.github/workflows/release.yml` compila os pacotes amd64/arm64 e cria a release no GitHub.
+To publish a release: `git tag v0.3.0 && git push --tags`. The `.github/workflows/release.yml` workflow builds the amd64/arm64 packages and creates the GitHub release.
 
-## Licença
+## License
 
-[GNU GPL v3 ou posterior](LICENSE). Pode usar, modificar e redistribuir o MonitorIQ; versões modificadas que distribuir têm de manter a mesma licença e disponibilizar o código-fonte.
+[GNU GPL v3 or later](LICENSE). You may use, modify and redistribute MonitorIQ; modified versions you distribute must keep the same license and make their source code available.
 
-Inclui [Chart.js](https://www.chartjs.org/) (MIT) e a fonte [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL OFL 1.1). Ver [NOTICE](NOTICE).
+Bundles [Chart.js](https://www.chartjs.org/) (MIT) and the [JetBrains Mono](https://www.jetbrains.com/lp/mono/) font (SIL OFL 1.1). See [NOTICE](NOTICE).

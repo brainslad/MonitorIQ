@@ -165,7 +165,7 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.Handler {
 			if u, csrf, err := s.Store.SessionUser(r.Context(), c.Value); err == nil {
 				if r.Method == http.MethodPost {
 					if subtle.ConstantTimeCompare([]byte(r.PostFormValue("csrf")), []byte(csrf)) != 1 {
-						http.Error(w, "Pedido inválido (CSRF). Recarregue a página e tente novamente.", http.StatusForbidden)
+						http.Error(w, "Invalid request (CSRF). Reload the page and try again.", http.StatusForbidden)
 						return
 					}
 				}
@@ -176,7 +176,7 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.Handler {
 			}
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/") || r.Method != http.MethodGet {
-			http.Error(w, "Não autenticado", http.StatusUnauthorized)
+			http.Error(w, "Not authenticated", http.StatusUnauthorized)
 			return
 		}
 		http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
@@ -305,7 +305,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name, title, act
 func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, code int, name string, p *page) {
 	t, ok := s.pages[name]
 	if !ok {
-		http.Error(w, "template em falta: "+name, http.StatusInternalServerError)
+		http.Error(w, "missing template: "+name, http.StatusInternalServerError)
 		return
 	}
 	p.User = userFrom(r)
@@ -325,8 +325,8 @@ func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, code int, 
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, name+".html", p); err != nil {
-		s.Log.Error("erro de template", "template", name, "err", err)
-		http.Error(w, "Erro interno", http.StatusInternalServerError)
+		s.Log.Error("template error", "template", name, "err", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -346,8 +346,8 @@ func (s *Server) flash(w http.ResponseWriter, r *http.Request, to string, ok boo
 }
 
 func (s *Server) serverError(w http.ResponseWriter, err error) {
-	s.Log.Error("erro interno", "err", err)
-	http.Error(w, "Erro interno do servidor", http.StatusInternalServerError)
+	s.Log.Error("internal error", "err", err)
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

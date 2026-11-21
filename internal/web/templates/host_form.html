@@ -1,10 +1,10 @@
 {{template "top" .}}{{$h := .Data.H}}
-<div class="page-head"><h1>{{if $h.ID}}Editar host{{else}}Novo host{{end}}</h1></div>
+<div class="page-head"><h1>{{if $h.ID}}Edit host{{else}}New host{{end}}</h1></div>
 <form class="card form" method="post">
   {{template "csrf" .CSRF}}
-  <label>Nome<input name="name" required value="{{$h.Name}}" placeholder="Servidor web principal"></label>
-  <label>Endereço (hostname ou IP)<input name="address" required value="{{$h.Address}}" placeholder="exemplo.pt ou 192.0.2.10" class="mono"></label>
-  <label>Descrição<textarea name="description" rows="2">{{$h.Description}}</textarea></label>
-  <div class="form-actions"><a class="btn ghost" href="/admin/hosts">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
+  <label>Name<input name="name" required value="{{$h.Name}}" placeholder="Main web server"></label>
+  <label>Address (hostname or IP)<input name="address" required value="{{$h.Address}}" placeholder="example.com or 192.0.2.10" class="mono"></label>
+  <label>Description<textarea name="description" rows="2">{{$h.Description}}</textarea></label>
+  <div class="form-actions"><a class="btn ghost" href="/admin/hosts">Cancel</a><button class="btn primary" type="submit">Save</button></div>
 </form>
 {{template "bottom" .}}
