@@ -32,19 +32,19 @@ var version = "dev"
 const defaultEnvFile = "/etc/monitoriq/monitoriq.env"
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `MonitorIQ %s
+	fmt.Fprintf(os.Stderr, `MonitorIQ %s — Know before your users do.
 
-Utilização:
-  monitoriq serve                         inicia o servidor web e o agendador de verificações
-  monitoriq migrate                       aplica as migrações da base de dados
-  monitoriq user set <utilizador>         cria um utilizador ou redefine a palavra-passe
-                    [--password X]        (sem --password é pedida no terminal)
-  monitoriq user list                     lista os utilizadores
-  monitoriq check <tipo> <alvo> [porta]   executa uma verificação pontual (diagnóstico)
-  monitoriq version                       mostra a versão
+Usage:
+  monitoriq serve                         start the web server and the check scheduler
+  monitoriq migrate                       apply database migrations
+  monitoriq user set <username>           create a user or reset its password
+                    [--password X]        (prompted on the terminal without --password)
+  monitoriq user list                     list users
+  monitoriq check <type> <target> [port]  run a one-off check (diagnostics)
+  monitoriq version                       print the version
 
-Opções globais:
-  --env <ficheiro>   ficheiro de configuração (predefinido: %s)
+Global options:
+  --env <file>   configuration file (default: %s)
 `, version, defaultEnvFile)
 }
 
@@ -62,7 +62,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err := config.LoadEnvFile(envFile); err != nil {
-		fatal("erro a ler %s: %v", envFile, err)
+		fatal("cannot read %s: %v", envFile, err)
 	}
 	web.Version = version
 
@@ -75,7 +75,7 @@ func main() {
 		if err := st.Migrate(context.Background()); err != nil {
 			fatal("%v", err)
 		}
-		fmt.Println("Base de dados atualizada.")
+		fmt.Println("Database is up to date.")
 	case "user":
 		userCmd(args[1:])
 	case "check":
@@ -91,7 +91,7 @@ func main() {
 }
 
 func fatal(format string, a ...any) {
-	fmt.Fprintf(os.Stderr, "erro: "+format+"\n", a...)
+	fmt.Fprintf(os.Stderr, "error: "+format+"\n", a...)
 	os.Exit(1)
 }
 
@@ -127,12 +127,12 @@ func serve() {
 	}
 	defer st.Close()
 	if err := st.Migrate(ctx); err != nil {
-		fatal("migrações: %v", err)
+		fatal("migrations: %v", err)
 	}
 	if n, err := st.CountUsers(ctx); err == nil && n == 0 {
 		pw := randomPassword()
 		if err := st.SetPasswordByUsername(ctx, "admin", pw); err == nil {
-			log.Warn("nenhum utilizador existia: foi criado o utilizador inicial", "utilizador", "admin", "palavra-passe", pw)
+			log.Warn("no users existed: created the initial user", "username", "admin", "password", pw)
 		}
 	}
 
@@ -154,15 +154,15 @@ func serve() {
 	go func() { sched.Run(ctx); close(done) }()
 
 	go func() {
-		log.Info("MonitorIQ a escutar", "endereço", cfg.Listen, "versão", version)
+		log.Info("MonitorIQ listening", "address", cfg.Listen, "version", version)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("servidor HTTP", "err", err)
+			log.Error("HTTP server", "err", err)
 			stop()
 		}
 	}()
 
 	<-ctx.Done()
-	log.Info("a terminar…")
+	log.Info("shutting down…")
 	sctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	_ = httpSrv.Shutdown(sctx)
@@ -180,7 +180,7 @@ func randomPassword() string {
 
 func userCmd(args []string) {
 	if len(args) == 0 {
-		fatal("utilize: monitoriq user set <utilizador> [--password X] | monitoriq user list")
+		fatal("usage: monitoriq user set <username> [--password X] | monitoriq user list")
 	}
 	st := openStore()
 	defer st.Close()
@@ -199,29 +199,29 @@ func userCmd(args []string) {
 		}
 	case "set":
 		fs := flag.NewFlagSet("user set", flag.ExitOnError)
-		pw := fs.String("password", "", "palavra-passe")
+		pw := fs.String("password", "", "password")
 		if len(args) < 2 {
-			fatal("indique o nome do utilizador")
+			fatal("enter the username")
 		}
 		name := args[1]
 		_ = fs.Parse(args[2:])
 		if *pw == "" {
-			fmt.Print("Nova palavra-passe: ")
+			fmt.Print("New password: ")
 			line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 			*pw = strings.TrimRight(line, "\r\n")
 		}
 		if err := st.SetPasswordByUsername(ctx, name, *pw); err != nil {
 			fatal("%v", err)
 		}
-		fmt.Printf("Utilizador %q atualizado.\n", name)
+		fmt.Printf("User %q updated.\n", name)
 	default:
-		fatal("subcomando desconhecido: %s", args[0])
+		fatal("unknown subcommand: %s", args[0])
 	}
 }
 
 func checkCmd(args []string) {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
-	cfgJSON := fs.String("config", "{}", "opções em JSON, ex.: '{\"record_type\":\"MX\"}'")
+	cfgJSON := fs.String("config", "{}", "type options as JSON, e.g. '{\"record_type\":\"MX\"}'")
 	timeout := fs.Duration("timeout", 10*time.Second, "timeout")
 	var pos []string
 	for len(args) > 0 {
@@ -233,14 +233,14 @@ func checkCmd(args []string) {
 		}
 	}
 	if len(pos) < 2 || !checks.ValidType(pos[0]) {
-		fatal("utilize: monitoriq check <http|ping|traceroute|dns|smtp|tls|tcp> <alvo> [porta] [--config JSON]")
+		fatal("usage: monitoriq check <http|ping|traceroute|dns|smtp|tls|tcp> <target> [port] [--config JSON]")
 	}
 	m := checks.Monitor{Type: pos[0], Target: pos[1], Timeout: *timeout}
 	if len(pos) > 2 {
 		_, _ = fmt.Sscan(pos[2], &m.Port)
 	}
 	if err := json.Unmarshal([]byte(*cfgJSON), &m.Config); err != nil {
-		fatal("--config inválido: %v", err)
+		fatal("invalid --config: %v", err)
 	}
 	res := checks.Run(context.Background(), m)
 	out, _ := json.MarshalIndent(map[string]any{

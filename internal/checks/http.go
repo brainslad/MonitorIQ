@@ -70,7 +70,7 @@ func checkHTTP(ctx context.Context, m Monitor) Result {
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
-		return down("URL inválido: %v", err)
+		return down("invalid URL: %v", err)
 	}
 	req.Header.Set("User-Agent", UserAgent)
 	req.Header.Set("Accept", "*/*")
@@ -80,9 +80,9 @@ func checkHTTP(ctx context.Context, m Monitor) Result {
 	if err != nil {
 		var certErr *tls.CertificateVerificationError
 		if errors.As(err, &certErr) {
-			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Certificado TLS inválido: " + certErr.Err.Error()}
+			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Invalid TLS certificate: " + certErr.Err.Error()}
 		}
-		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Pedido falhou: " + err.Error()}
+		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Request failed: " + err.Error()}
 	}
 	defer resp.Body.Close()
 
@@ -109,26 +109,26 @@ func checkHTTP(ctx context.Context, m Monitor) Result {
 	res := Result{Status: Up, LatencyMs: ms(latency), Details: details}
 	if !statusMatches(m.Config.ExpectedStatus, resp.StatusCode) {
 		res.Status = Down
-		res.Message = fmt.Sprintf("HTTP %d (esperado %s)", resp.StatusCode, orDefault(m.Config.ExpectedStatus, "200-399"))
+		res.Message = fmt.Sprintf("HTTP %d (expected %s)", resp.StatusCode, orDefault(m.Config.ExpectedStatus, "200-399"))
 		return res
 	}
 	if needBody {
 		found := strings.Contains(string(body), m.Config.Keyword)
 		if m.Config.KeywordAbsent && found {
 			res.Status = Down
-			res.Message = fmt.Sprintf("HTTP %d, palavra-chave proibida %q encontrada", resp.StatusCode, m.Config.Keyword)
+			res.Message = fmt.Sprintf("HTTP %d, forbidden keyword %q found", resp.StatusCode, m.Config.Keyword)
 			return res
 		}
 		if !m.Config.KeywordAbsent && !found {
 			res.Status = Down
-			res.Message = fmt.Sprintf("HTTP %d, palavra-chave %q não encontrada", resp.StatusCode, m.Config.Keyword)
+			res.Message = fmt.Sprintf("HTTP %d, keyword %q not found", resp.StatusCode, m.Config.Keyword)
 			return res
 		}
 	}
-	res.Message = fmt.Sprintf("HTTP %d em %.0f ms", resp.StatusCode, res.LatencyMs)
+	res.Message = fmt.Sprintf("HTTP %d in %.0f ms", resp.StatusCode, res.LatencyMs)
 	if m.Config.DegradedMs > 0 && res.LatencyMs > float64(m.Config.DegradedMs) {
 		res.Status = Degraded
-		res.Message += fmt.Sprintf(" (lento: limite %d ms)", m.Config.DegradedMs)
+		res.Message += fmt.Sprintf(" (slow: threshold %d ms)", m.Config.DegradedMs)
 	}
 	return res
 }

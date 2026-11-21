@@ -115,8 +115,8 @@
 
   // ---------------------------------------------------------------- charts
   var fmtTime = function (d, withDate) {
-    return withDate ? d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })
-      : d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+    return withDate ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })
+      : d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   };
   var baseScales = function () {
     return {
@@ -137,7 +137,7 @@
         type: "line",
         data: {
           labels: pts.map(function (p) { return fmtTime(new Date(p.t)); }),
-          datasets: [{ label: "Resposta média", data: pts.map(function (p) { return p.avg; }), borderColor: css("--chart-line"),
+          datasets: [{ label: "Average response", data: pts.map(function (p) { return p.avg; }), borderColor: css("--chart-line"),
             backgroundColor: css("--chart-fill"), fill: true, pointRadius: 0, borderWidth: 1.6, tension: 0.25, spanGaps: true }]
         },
         options: {
@@ -172,9 +172,9 @@
         data: {
           labels: pts.map(function (p) { return fmtTime(new Date(p.t), withDate); }),
           datasets: [
-            { label: "Latência (ms)", data: pts.map(function (p) { return p.avg; }), borderColor: css("--chart-line"), backgroundColor: css("--chart-fill"),
+            { label: "Latency (ms)", data: pts.map(function (p) { return p.avg; }), borderColor: css("--chart-line"), backgroundColor: css("--chart-fill"),
               fill: true, pointRadius: 0, borderWidth: 1.6, tension: 0.25, spanGaps: true, yAxisID: "y" },
-            { label: "Disponibilidade (%)", data: pts.map(function (p) { return p.uptime; }), borderColor: css("--up"),
+            { label: "Availability (%)", data: pts.map(function (p) { return p.uptime; }), borderColor: css("--up"),
               backgroundColor: "transparent", pointRadius: 0, stepped: true, borderWidth: 1.2, yAxisID: "y1" }
           ]
         },

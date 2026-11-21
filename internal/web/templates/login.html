@@ -1,12 +1,12 @@
 {{template "head" .}}
 <body class="center-page">
 <form class="card login" method="post" action="/login">
-  <div class="brand big"><span class="logo"><img src="/static/favicon.svg" alt="" width="22" height="22"></span><span><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">monitorização de uptime e serviços</span></span></div>
+  <div class="brand big"><span class="logo"><img src="/static/favicon.svg" alt="" width="22" height="22"></span><span><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">Know before your users do.</span></span></div>
   {{if .Flash}}<div class="flash err">{{.Flash}}</div>{{end}}
   <input type="hidden" name="next" value="{{.Data.Next}}">
-  <label>Utilizador<input name="username" autocomplete="username" required autofocus value="{{.Data.Username}}"></label>
-  <label>Palavra-passe<input name="password" type="password" autocomplete="current-password" required></label>
-  <button class="btn primary wide" type="submit">Entrar</button>
+  <label>Username<input name="username" autocomplete="username" required autofocus value="{{.Data.Username}}"></label>
+  <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+  <button class="btn primary wide" type="submit">Sign in</button>
 </form>
 <script src="/static/app.js"></script>
 </body>

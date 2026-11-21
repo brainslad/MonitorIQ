@@ -52,10 +52,10 @@ func validateHost(h *Host) error {
 	h.Address = strings.TrimSpace(h.Address)
 	h.Description = strings.TrimSpace(h.Description)
 	if h.Name == "" {
-		return errors.New("o nome do host é obrigatório")
+		return errors.New("host name is required")
 	}
 	if h.Address == "" {
-		return errors.New("o endereço do host é obrigatório")
+		return errors.New("host address is required")
 	}
 	return nil
 }
@@ -185,34 +185,34 @@ func ValidateMonitor(m *Monitor) error {
 	m.Name = strings.TrimSpace(m.Name)
 	m.Target = strings.TrimSpace(m.Target)
 	if m.Name == "" {
-		return errors.New("o nome do serviço é obrigatório")
+		return errors.New("monitor name is required")
 	}
 	if !checks.ValidType(m.Type) {
-		return errors.New("tipo de serviço inválido")
+		return errors.New("invalid monitor type")
 	}
 	if m.HostID == 0 {
-		return errors.New("escolha um host")
+		return errors.New("choose a host")
 	}
 	if m.Port < 0 || m.Port > 65535 {
-		return errors.New("porta inválida (0-65535)")
+		return errors.New("invalid port (0-65535)")
 	}
 	if m.Type == checks.TypeTCP && m.Port == 0 {
-		return errors.New("indique a porta TCP a verificar")
+		return errors.New("enter the TCP port to check")
 	}
 	if m.IntervalSeconds < 10 || m.IntervalSeconds > 86400 {
-		return errors.New("o intervalo deve estar entre 10 e 86400 segundos")
+		return errors.New("interval must be between 10 and 86400 seconds")
 	}
 	if m.TimeoutSeconds < 1 || m.TimeoutSeconds > 120 {
-		return errors.New("o timeout deve estar entre 1 e 120 segundos")
+		return errors.New("timeout must be between 1 and 120 seconds")
 	}
 	if m.Retries < 0 || m.Retries > 10 {
-		return errors.New("as tentativas devem estar entre 0 e 10")
+		return errors.New("failures before alerting must be between 0 and 10")
 	}
 	if m.Type == checks.TypeDNS {
 		switch strings.ToUpper(m.Config.RecordType) {
 		case "", "A", "AAAA", "CNAME", "MX", "TXT", "NS":
 		default:
-			return errors.New("tipo de registo DNS inválido")
+			return errors.New("invalid DNS record type")
 		}
 	}
 	return nil

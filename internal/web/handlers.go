@@ -22,25 +22,25 @@ func safeNext(next string) string {
 }
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "login", "Entrar", "", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
+	s.render(w, r, "login", "Sign in", "", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := s.clientIP(r)
 	next := safeNext(r.PostFormValue("next"))
 	fail := func(msg string) {
-		s.renderStatus(w, r, http.StatusUnauthorized, "login", &page{Title: "Entrar", Flash: msg,
+		s.renderStatus(w, r, http.StatusUnauthorized, "login", &page{Title: "Sign in", Flash: msg,
 			Data: map[string]any{"Next": next, "Username": r.PostFormValue("username")}})
 	}
 	if s.limiter.blocked(ip) {
-		fail("Demasiadas tentativas falhadas. Aguarde 15 minutos.")
+		fail("Too many failed attempts. Please wait 15 minutes.")
 		return
 	}
 	u, err := s.Store.Authenticate(r.Context(), r.PostFormValue("username"), r.PostFormValue("password"))
 	if err != nil {
 		s.limiter.fail(ip)
-		s.Log.Warn("login falhado", "username", r.PostFormValue("username"), "ip", ip)
-		fail("Utilizador ou palavra-passe incorretos.")
+		s.Log.Warn("failed login", "username", r.PostFormValue("username"), "ip", ip)
+		fail("Invalid username or password.")
 		return
 	}
 	s.limiter.reset(ip)
@@ -289,7 +289,7 @@ func (s *Server) handleMonitorCheckNow(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/monitors/"+strconv.FormatInt(id, 10), true, "Verificação agendada. Os resultados aparecem em alguns segundos.")
+	s.flash(w, r, "/monitors/"+strconv.FormatInt(id, 10), true, "Check scheduled. Results will appear in a few seconds.")
 }
 
 var seriesRanges = map[string]time.Duration{
@@ -348,10 +348,10 @@ func (s *Server) handleHostSave(w http.ResponseWriter, r *http.Request) {
 	}
 	if isNew {
 		s.flash(w, r, "/admin/monitors/new?host="+strconv.FormatInt(h.ID, 10), true,
-			"Host criado. Adicione agora os serviços a monitorizar.")
+			"Host created. Now add the monitors for it.")
 		return
 	}
-	s.flash(w, r, "/admin/hosts", true, "Host guardado.")
+	s.flash(w, r, "/admin/hosts", true, "Host saved.")
 }
 
 func (s *Server) handleHostDelete(w http.ResponseWriter, r *http.Request) {
@@ -359,7 +359,7 @@ func (s *Server) handleHostDelete(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/admin/hosts", true, "Host e respetivos serviços apagados.")
+	s.flash(w, r, "/admin/hosts", true, "Host and its monitors deleted.")
 }
 
 // ---------------------------------------------------------------- monitors
@@ -370,7 +370,7 @@ func (s *Server) handleMonitors(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.render(w, r, "monitors", "Serviços", "monitors", map[string]any{"Groups": groupByHost(list), "Total": len(list)})
+	s.render(w, r, "monitors", "Monitors", "monitors", map[string]any{"Groups": groupByHost(list), "Total": len(list)})
 }
 
 func defaultMonitor() *store.Monitor {
@@ -406,10 +406,10 @@ func (s *Server) handleMonitorForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(data["Hosts"].([]store.Host)) == 0 {
-		s.flash(w, r, "/admin/hosts/new", false, "Crie primeiro um host para lhe associar serviços.")
+		s.flash(w, r, "/admin/hosts/new", false, "Create a host first to attach monitors to it.")
 		return
 	}
-	s.render(w, r, "monitor_form", "Serviço", "monitors", data)
+	s.render(w, r, "monitor_form", "Monitor", "monitors", data)
 }
 
 func monitorFromForm(r *http.Request, id int64) *store.Monitor {
@@ -462,10 +462,10 @@ func (s *Server) handleMonitorSave(w http.ResponseWriter, r *http.Request) {
 			s.serverError(w, derr)
 			return
 		}
-		s.renderStatus(w, r, http.StatusBadRequest, "monitor_form", &page{Title: "Serviço", Active: "monitors", Flash: err.Error(), Data: data})
+		s.renderStatus(w, r, http.StatusBadRequest, "monitor_form", &page{Title: "Monitor", Active: "monitors", Flash: err.Error(), Data: data})
 		return
 	}
-	s.flash(w, r, "/monitors/"+strconv.FormatInt(m.ID, 10), true, "Serviço guardado. A primeira verificação corre de imediato.")
+	s.flash(w, r, "/monitors/"+strconv.FormatInt(m.ID, 10), true, "Monitor saved. The first check runs right away.")
 }
 
 func (s *Server) handleMonitorDelete(w http.ResponseWriter, r *http.Request) {
@@ -473,7 +473,7 @@ func (s *Server) handleMonitorDelete(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/admin/monitors", true, "Serviço apagado, incluindo o seu histórico.")
+	s.flash(w, r, "/admin/monitors", true, "Monitor deleted, including its history.")
 }
 
 func (s *Server) handleMonitorToggle(w http.ResponseWriter, r *http.Request) {
@@ -487,9 +487,9 @@ func (s *Server) handleMonitorToggle(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	msg := "Serviço pausado."
+	msg := "Monitor paused."
 	if !m.Enabled {
-		msg = "Serviço retomado."
+		msg = "Monitor resumed."
 	}
 	back := safeNext(r.PostFormValue("back"))
 	s.flash(w, r, back, true, msg)
@@ -564,7 +564,7 @@ func (s *Server) handleStatusPageForm(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleStatusPageSave(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "formulário inválido", http.StatusBadRequest)
+		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
 	p := &store.StatusPage{ID: pathID(r), Slug: r.PostFormValue("slug"), Title: r.PostFormValue("title"),
@@ -596,7 +596,7 @@ func (s *Server) handleStatusPageSave(w http.ResponseWriter, r *http.Request) {
 		s.renderStatus(w, r, http.StatusBadRequest, "status_page_form", &page{Title: "Status page", Active: "status", Flash: err.Error(), Data: data})
 		return
 	}
-	s.flash(w, r, "/admin/status-pages", true, "Status page guardada.")
+	s.flash(w, r, "/admin/status-pages", true, "Status page saved.")
 }
 
 func (s *Server) handleStatusPageDelete(w http.ResponseWriter, r *http.Request) {
@@ -604,7 +604,7 @@ func (s *Server) handleStatusPageDelete(w http.ResponseWriter, r *http.Request) 
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/admin/status-pages", true, "Status page apagada.")
+	s.flash(w, r, "/admin/status-pages", true, "Status page deleted.")
 }
 
 // ---------------------------------------------------------------- users
@@ -615,49 +615,49 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.render(w, r, "users", "Utilizadores", "users", map[string]any{"Users": users})
+	s.render(w, r, "users", "Users", "users", map[string]any{"Users": users})
 }
 
 func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 	if r.PostFormValue("password") != r.PostFormValue("password2") {
-		s.flash(w, r, "/admin/users", false, "As palavras-passe não coincidem.")
+		s.flash(w, r, "/admin/users", false, "Passwords do not match.")
 		return
 	}
 	if _, err := s.Store.CreateUser(r.Context(), r.PostFormValue("username"), r.PostFormValue("password")); err != nil {
 		s.flash(w, r, "/admin/users", false, err.Error())
 		return
 	}
-	s.flash(w, r, "/admin/users", true, "Utilizador criado.")
+	s.flash(w, r, "/admin/users", true, "User created.")
 }
 
 func (s *Server) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
 	if id == userFrom(r).ID {
-		s.flash(w, r, "/admin/users", false, "Não pode apagar o seu próprio utilizador.")
+		s.flash(w, r, "/admin/users", false, "You cannot delete your own user.")
 		return
 	}
 	if err := s.Store.DeleteUser(r.Context(), id); err != nil {
 		s.flash(w, r, "/admin/users", false, err.Error())
 		return
 	}
-	s.flash(w, r, "/admin/users", true, "Utilizador apagado.")
+	s.flash(w, r, "/admin/users", true, "User deleted.")
 }
 
 func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r)
 	if !s.Store.CheckPassword(r.Context(), u.ID, r.PostFormValue("current")) {
-		s.flash(w, r, "/admin/users", false, "A palavra-passe atual está incorreta.")
+		s.flash(w, r, "/admin/users", false, "The current password is incorrect.")
 		return
 	}
 	if r.PostFormValue("password") != r.PostFormValue("password2") {
-		s.flash(w, r, "/admin/users", false, "As palavras-passe novas não coincidem.")
+		s.flash(w, r, "/admin/users", false, "The new passwords do not match.")
 		return
 	}
 	if err := s.Store.SetPassword(r.Context(), u.ID, r.PostFormValue("password")); err != nil {
 		s.flash(w, r, "/admin/users", false, err.Error())
 		return
 	}
-	s.flash(w, r, "/admin/users", true, "Palavra-passe alterada.")
+	s.flash(w, r, "/admin/users", true, "Password changed.")
 }
 
 // ---------------------------------------------------------------- settings
@@ -673,7 +673,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.render(w, r, "settings", "Definições", "settings", map[string]any{
+	s.render(w, r, "settings", "Settings", "settings", map[string]any{
 		"R": ret, "Stats": stats, "Max": store.MaxRetentionDays,
 		"SizeMB": float64(stats.SizeBytes) / (1 << 20),
 	})
@@ -687,7 +687,7 @@ func (s *Server) handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, v := range []int{ret.RawDays, ret.AggregateDays, ret.EventsDays} {
 		if v < 1 || v > store.MaxRetentionDays {
-			s.flash(w, r, "/admin/settings", false, "Os períodos de retenção devem estar entre 1 e 730 dias (2 anos).")
+			s.flash(w, r, "/admin/settings", false, "Retention periods must be between 1 and 730 days (2 years).")
 			return
 		}
 	}
@@ -695,7 +695,7 @@ func (s *Server) handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/admin/settings", true, "Retenção guardada. A limpeza automática corre de hora a hora.")
+	s.flash(w, r, "/admin/settings", true, "Retention saved. Automatic cleanup runs every hour.")
 }
 
 func (s *Server) handlePurgeNow(w http.ResponseWriter, r *http.Request) {
@@ -704,6 +704,6 @@ func (s *Server) handlePurgeNow(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.flash(w, r, "/admin/settings", true, "Limpeza concluída: "+strconv.FormatInt(st.Results, 10)+" resultados, "+
-		strconv.FormatInt(st.Hourly, 10)+" agregados e "+strconv.FormatInt(st.Events, 10)+" eventos removidos.")
+	s.flash(w, r, "/admin/settings", true, "Cleanup finished: "+strconv.FormatInt(st.Results, 10)+" results, "+
+		strconv.FormatInt(st.Hourly, 10)+" aggregates and "+strconv.FormatInt(st.Events, 10)+" events removed.")
 }

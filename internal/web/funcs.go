@@ -34,7 +34,7 @@ func funcMap() template.FuncMap {
 		"since":   func(t time.Time) string { return humanDuration(time.Since(t)) },
 		"between": func(a time.Time, b *time.Time) string {
 			if b == nil {
-				return humanDuration(time.Since(a)) + " (em curso)"
+				return humanDuration(time.Since(a)) + " (ongoing)"
 			}
 			return humanDuration(b.Sub(a))
 		},
@@ -191,9 +191,9 @@ func fmtPct(v float64) string {
 
 func ago(t *time.Time) string {
 	if t == nil {
-		return "nunca"
+		return "never"
 	}
-	return "há " + humanDuration(time.Since(*t))
+	return humanDuration(time.Since(*t)) + " ago"
 }
 
 func humanDuration(d time.Duration) string {
@@ -213,7 +213,7 @@ func humanDuration(d time.Duration) string {
 		}
 		return fmt.Sprintf("%dh %dmin", h, m)
 	default:
-		return fmt.Sprintf("%d dias", int(d.Hours()/24))
+		return fmt.Sprintf("%d days", int(d.Hours()/24))
 	}
 }
 

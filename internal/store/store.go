@@ -25,7 +25,7 @@ var migrationsFS embed.FS
 // MaxRetentionDays is the hard upper bound for any retention setting (2 years).
 const MaxRetentionDays = 730
 
-var ErrNotFound = errors.New("não encontrado")
+var ErrNotFound = errors.New("not found")
 
 // dummyHash is compared against when a username does not exist.
 var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("monitoriq-dummy-password"), 12)
@@ -38,7 +38,7 @@ type Store struct {
 func Open(ctx context.Context, url string) (*Store, error) {
 	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
-		return nil, fmt.Errorf("MONITORIQ_DATABASE_URL inválido: %w", err)
+		return nil, fmt.Errorf("invalid MONITORIQ_DATABASE_URL: %w", err)
 	}
 	if cfg.MaxConns < 10 {
 		cfg.MaxConns = 20
@@ -51,7 +51,7 @@ func Open(ctx context.Context, url string) (*Store, error) {
 	defer cancel()
 	if err := pool.Ping(pctx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("não foi possível ligar à base de dados: %w", err)
+		return nil, fmt.Errorf("cannot connect to the database: %w", err)
 	}
 	return &Store{Pool: pool}, nil
 }
@@ -93,7 +93,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		}
 		if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
 			_ = tx.Rollback(ctx)
-			return fmt.Errorf("migração %s: %w", name, err)
+			return fmt.Errorf("migration %s: %w", name, err)
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
 			_ = tx.Rollback(ctx)
@@ -124,7 +124,7 @@ type User struct {
 
 func hashPassword(pw string) (string, error) {
 	if len(pw) < 8 {
-		return "", errors.New("a palavra-passe deve ter pelo menos 8 caracteres")
+		return "", errors.New("the password must be at least 8 characters long")
 	}
 	h, err := bcrypt.GenerateFromPassword([]byte(pw), 12)
 	return string(h), err
@@ -133,7 +133,7 @@ func hashPassword(pw string) (string, error) {
 func (s *Store) CreateUser(ctx context.Context, username, password string) (int64, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
-		return 0, errors.New("nome de utilizador obrigatório")
+		return 0, errors.New("username is required")
 	}
 	h, err := hashPassword(password)
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *Store) CreateUser(ctx context.Context, username, password string) (int6
 	var id int64
 	err = s.Pool.QueryRow(ctx, `INSERT INTO users (username, password_hash) VALUES ($1,$2) RETURNING id`, username, h).Scan(&id)
 	if err != nil && strings.Contains(err.Error(), "users_username_key") {
-		return 0, errors.New("já existe um utilizador com esse nome")
+		return 0, errors.New("a user with that name already exists")
 	}
 	return id, err
 }
@@ -214,7 +214,7 @@ func (s *Store) DeleteUser(ctx context.Context, id int64) error {
 		return err
 	}
 	if n <= 1 {
-		return errors.New("não é possível apagar o último utilizador")
+		return errors.New("the last user cannot be deleted")
 	}
 	_, err := s.Pool.Exec(ctx, `DELETE FROM users WHERE id=$1`, id)
 	return err

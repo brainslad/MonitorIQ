@@ -48,7 +48,7 @@ func bareHost(target string) string {
 func checkTCP(ctx context.Context, m Monitor) Result {
 	if m.Port <= 0 {
 		if _, p, err := net.SplitHostPort(strings.TrimSpace(m.Target)); err != nil || p == "" {
-			return down("porta não definida")
+			return down("no port defined")
 		}
 	}
 	addr := hostPort(m.Target, m.Port, 0)
@@ -57,10 +57,10 @@ func checkTCP(ctx context.Context, m Monitor) Result {
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	lat := time.Since(start)
 	if err != nil {
-		return Result{Status: Down, LatencyMs: ms(lat), Message: "Ligação a " + addr + " falhou: " + cleanErr(err)}
+		return Result{Status: Down, LatencyMs: ms(lat), Message: "Connection to " + addr + " failed: " + cleanErr(err)}
 	}
 	_ = conn.Close()
-	return Result{Status: Up, LatencyMs: ms(lat), Message: fmt.Sprintf("Porta %s aberta (%.0f ms)", addr, ms(lat))}
+	return Result{Status: Up, LatencyMs: ms(lat), Message: fmt.Sprintf("Port %s open (%.0f ms)", addr, ms(lat))}
 }
 
 func checkTLS(ctx context.Context, m Monitor) Result {
@@ -80,12 +80,12 @@ func checkTLS(ctx context.Context, m Monitor) Result {
 	c, err := d.DialContext(ctx, "tcp", addr)
 	lat := time.Since(start)
 	if err != nil {
-		return Result{Status: Down, LatencyMs: ms(lat), Message: "Handshake TLS falhou: " + cleanErr(err)}
+		return Result{Status: Down, LatencyMs: ms(lat), Message: "TLS handshake failed: " + cleanErr(err)}
 	}
 	defer c.Close()
 	state := c.(*tls.Conn).ConnectionState()
 	if len(state.PeerCertificates) == 0 {
-		return down("o servidor não apresentou certificado")
+		return down("server presented no certificate")
 	}
 	return evaluateCert(state.PeerCertificates, host, warn, lat, time.Now())
 }
@@ -114,15 +114,15 @@ func evaluateCert(chain []*x509.Certificate, host string, warnDays int, lat time
 	switch {
 	case now.After(leaf.NotAfter):
 		res.Status = Down
-		res.Message = fmt.Sprintf("Certificado expirou em %s", exp)
+		res.Message = fmt.Sprintf("Certificate expired on %s", exp)
 	case verr != nil:
 		res.Status = Down
-		res.Message = "Certificado inválido: " + verr.Error()
+		res.Message = "Invalid certificate: " + verr.Error()
 	case daysLeft < warnDays:
 		res.Status = Degraded
-		res.Message = fmt.Sprintf("Certificado expira em %d dias (%s)", daysLeft, exp)
+		res.Message = fmt.Sprintf("Certificate expires in %d days (%s)", daysLeft, exp)
 	default:
-		res.Message = fmt.Sprintf("Certificado válido, expira em %d dias (%s)", daysLeft, exp)
+		res.Message = fmt.Sprintf("Certificate valid, expires in %d days (%s)", daysLeft, exp)
 	}
 	return res
 }
@@ -147,13 +147,13 @@ func checkSMTP(ctx context.Context, m Monitor) Result {
 		conn, err = nd.DialContext(ctx, "tcp", addr)
 	}
 	if err != nil {
-		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Ligação SMTP falhou: " + cleanErr(err)}
+		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "SMTP connection failed: " + cleanErr(err)}
 	}
 	_ = conn.SetDeadline(deadline)
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {
 		_ = conn.Close()
-		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Banner SMTP inválido: " + cleanErr(err)}
+		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Invalid SMTP banner: " + cleanErr(err)}
 	}
 	defer c.Close()
 	helo, _ := os.Hostname()
@@ -161,15 +161,15 @@ func checkSMTP(ctx context.Context, m Monitor) Result {
 		helo = "monitoriq.local"
 	}
 	if err := c.Hello(helo); err != nil {
-		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "EHLO falhou: " + cleanErr(err)}
+		return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "EHLO failed: " + cleanErr(err)}
 	}
 	details := map[string]any{"address": addr, "tls": mode}
 	if mode == "starttls" {
 		if ok, _ := c.Extension("STARTTLS"); !ok {
-			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Servidor não anuncia STARTTLS", Details: details}
+			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "Server does not advertise STARTTLS", Details: details}
 		}
 		if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
-			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "STARTTLS falhou: " + cleanErr(err), Details: details}
+			return Result{Status: Down, LatencyMs: ms(time.Since(start)), Message: "STARTTLS failed: " + cleanErr(err), Details: details}
 		}
 	}
 	if st, ok := c.TLSConnectionState(); ok && len(st.PeerCertificates) > 0 {
@@ -177,7 +177,7 @@ func checkSMTP(ctx context.Context, m Monitor) Result {
 	}
 	_ = c.Quit()
 	lat := time.Since(start)
-	return Result{Status: Up, LatencyMs: ms(lat), Message: fmt.Sprintf("SMTP respondeu em %.0f ms", ms(lat)), Details: details}
+	return Result{Status: Up, LatencyMs: ms(lat), Message: fmt.Sprintf("SMTP answered in %.0f ms", ms(lat)), Details: details}
 }
 
 func checkDNS(ctx context.Context, m Monitor) Result {
@@ -240,7 +240,7 @@ func checkDNS(ctx context.Context, m Monitor) Result {
 			answers = append(answers, strings.TrimSuffix(x.Host, "."))
 		}
 	default:
-		return down("tipo de registo DNS não suportado: %s", rtype)
+		return down("unsupported DNS record type: %s", rtype)
 	}
 	lat := time.Since(start)
 	sort.Strings(answers)
@@ -249,10 +249,10 @@ func checkDNS(ctx context.Context, m Monitor) Result {
 		details["server"] = server
 	}
 	if err != nil {
-		return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("Resolução %s de %s falhou: %s", rtype, name, cleanErr(err)), Details: details}
+		return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("%s lookup of %s failed: %s", rtype, name, cleanErr(err)), Details: details}
 	}
 	if len(answers) == 0 {
-		return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("Sem registos %s para %s", rtype, name), Details: details}
+		return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("No %s records for %s", rtype, name), Details: details}
 	}
 	if exp := strings.TrimSpace(m.Config.Expected); exp != "" {
 		match := false
@@ -263,7 +263,7 @@ func checkDNS(ctx context.Context, m Monitor) Result {
 			}
 		}
 		if !match {
-			return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("Resposta %s não contém %q: %s", rtype, exp, strings.Join(answers, ", ")), Details: details}
+			return Result{Status: Down, LatencyMs: ms(lat), Message: fmt.Sprintf("%s answer does not contain %q: %s", rtype, exp, strings.Join(answers, ", ")), Details: details}
 		}
 	}
 	return Result{Status: Up, LatencyMs: ms(lat), Message: fmt.Sprintf("%s %s → %s", rtype, name, truncate(strings.Join(answers, ", "), 200)), Details: details}
@@ -280,10 +280,10 @@ func cleanErr(err error) string {
 	var dnsErr *net.DNSError
 	if errors.As(err, &dnsErr) {
 		if dnsErr.IsNotFound {
-			return "nome não encontrado (" + dnsErr.Name + ")"
+			return "name not found (" + dnsErr.Name + ")"
 		}
 		if dnsErr.IsTimeout {
-			return "timeout DNS"
+			return "DNS timeout"
 		}
 	}
 	var ne net.Error

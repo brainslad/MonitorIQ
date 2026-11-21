@@ -13,7 +13,7 @@ test:
 vet:
 	go vet ./...
 
-# Gera pacotes .tar.gz prontos a instalar (binário + install.sh) para amd64 e arm64.
+# Builds ready-to-install .tar.gz packages (binary + install.sh) for amd64 and arm64.
 dist: clean
 	@for arch in amd64 arm64; do \
 		name=monitoriq-$(VERSION)-linux-$$arch; dir=$(DIST)/$$name; \

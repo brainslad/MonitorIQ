@@ -51,7 +51,7 @@ func ParsePing(out string) (PingStats, bool) {
 func checkPing(ctx context.Context, m Monitor) Result {
 	host := bareHost(m.Target)
 	if !validHost.MatchString(host) || strings.HasPrefix(host, "-") {
-		return down("endereço inválido: %q", host)
+		return down("invalid address: %q", host)
 	}
 	count := m.Config.PingCount
 	if count <= 0 {
@@ -78,7 +78,7 @@ func checkPing(ctx context.Context, m Monitor) Result {
 		if msg == "" && err != nil {
 			msg = err.Error()
 		}
-		return down("ping falhou: %s", truncate(msg, 200))
+		return down("ping failed: %s", truncate(msg, 200))
 	}
 	loss := 100.0
 	if st.Sent > 0 {
@@ -88,11 +88,11 @@ func checkPing(ctx context.Context, m Monitor) Result {
 		"rtt_min": st.Min, "rtt_avg": st.Avg, "rtt_max": st.Max, "rtt_mdev": st.Jitter}
 	switch {
 	case st.Received == 0:
-		return Result{Status: Down, Message: fmt.Sprintf("Sem resposta (%d pacotes perdidos)", st.Sent), Details: details}
+		return Result{Status: Down, Message: fmt.Sprintf("No reply (%d packets lost)", st.Sent), Details: details}
 	case st.Received < st.Sent:
-		return Result{Status: Degraded, LatencyMs: st.Avg, Message: fmt.Sprintf("%.0f%% de perda, média %.1f ms", loss, st.Avg), Details: details}
+		return Result{Status: Degraded, LatencyMs: st.Avg, Message: fmt.Sprintf("%.0f%% packet loss, avg %.1f ms", loss, st.Avg), Details: details}
 	default:
-		return Result{Status: Up, LatencyMs: st.Avg, Message: fmt.Sprintf("0%% de perda, média %.1f ms", st.Avg), Details: details}
+		return Result{Status: Up, LatencyMs: st.Avg, Message: fmt.Sprintf("0%% packet loss, avg %.1f ms", st.Avg), Details: details}
 	}
 }
 
@@ -145,7 +145,7 @@ func ParseTraceroute(out string) []Hop {
 func checkTraceroute(ctx context.Context, m Monitor) Result {
 	host := bareHost(m.Target)
 	if !validHost.MatchString(host) || strings.HasPrefix(host, "-") {
-		return down("endereço inválido: %q", host)
+		return down("invalid address: %q", host)
 	}
 	maxHops := m.Config.MaxHops
 	if maxHops <= 0 || maxHops > 64 {
@@ -177,7 +177,7 @@ func checkTraceroute(ctx context.Context, m Monitor) Result {
 		if msg == "" && err != nil {
 			msg = err.Error()
 		}
-		return down("traceroute falhou: %s", truncate(msg, 200))
+		return down("traceroute failed: %s", truncate(msg, 200))
 	}
 	details := map[string]any{"hops": hops, "duration_ms": ms(elapsed)}
 	last := hops[len(hops)-1]
@@ -188,11 +188,11 @@ func checkTraceroute(ctx context.Context, m Monitor) Result {
 	}
 	reached := last.Address != "" && (dest == "" || last.Address == dest)
 	if !reached {
-		return Result{Status: Down, Message: fmt.Sprintf("Destino não alcançado após %d saltos", len(hops)), Details: details}
+		return Result{Status: Down, Message: fmt.Sprintf("Destination not reached after %d hops", len(hops)), Details: details}
 	}
 	lat := 0.0
 	if len(last.RTTs) > 0 {
 		lat = last.RTTs[0]
 	}
-	return Result{Status: Up, LatencyMs: lat, Message: fmt.Sprintf("Destino alcançado em %d saltos (%.1f ms)", len(hops), lat), Details: details}
+	return Result{Status: Up, LatencyMs: lat, Message: fmt.Sprintf("Destination reached in %d hops (%.1f ms)", len(hops), lat), Details: details}
 }
