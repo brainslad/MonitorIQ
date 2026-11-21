@@ -1,0 +1,45 @@
+{{define "head"}}<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{if .Refresh}}<meta http-equiv="refresh" content="{{.Refresh}}">{{end}}
+<title>{{.Title}} · MonitorIQ</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>{{end}}
+
+{{define "top"}}{{template "head" .}}
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="24" height="24"> MonitorIQ</a>
+  {{if .User}}
+  <nav class="nav">
+    <a href="/" class="{{if eq .Active "dashboard"}}active{{end}}">Dashboard</a>
+    <a href="/admin/hosts" class="{{if eq .Active "hosts"}}active{{end}}">Hosts</a>
+    <a href="/admin/monitors" class="{{if eq .Active "monitors"}}active{{end}}">Serviços</a>
+    <a href="/admin/status-pages" class="{{if eq .Active "status"}}active{{end}}">Status pages</a>
+    <a href="/admin/users" class="{{if eq .Active "users"}}active{{end}}">Utilizadores</a>
+    <a href="/admin/settings" class="{{if eq .Active "settings"}}active{{end}}">Definições</a>
+  </nav>
+  <form method="post" action="/logout" class="logout">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <span class="muted">{{.User.Username}}</span>
+    <button class="btn small ghost" type="submit">Sair</button>
+  </form>
+  {{end}}
+</header>
+<main class="container">
+{{if .Flash}}<div class="flash {{if .FlashOK}}ok{{else}}err{{end}}" role="status">{{.Flash}}</div>{{end}}
+{{end}}
+
+{{define "bottom"}}
+</main>
+<footer class="footer muted">MonitorIQ {{.Version}}</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>{{end}}
+
+{{define "dot"}}<span class="dot {{statusClass .}}" title="{{statusLabel .}}"></span>{{end}}
+{{define "badge"}}<span class="badge {{statusClass .}}">{{statusLabel .}}</span>{{end}}
+{{define "csrf"}}<input type="hidden" name="csrf" value="{{.}}">{{end}}

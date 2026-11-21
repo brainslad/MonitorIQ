@@ -1,0 +1,37 @@
+[Unit]
+Description=MonitorIQ - monitorização de uptime e serviços
+Documentation=https://github.com/brainslad/monitoriq
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monitoriq
+Group=monitoriq
+EnvironmentFile=/etc/monitoriq/monitoriq.env
+ExecStart=/usr/local/bin/monitoriq serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# ping (ICMP) precisa de CAP_NET_RAW; CAP_NET_BIND_SERVICE permite escutar em portas < 1024.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_BIND_SERVICE
+
+# Endurecimento
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictSUIDSGID=true
+LockPersonality=true
+StateDirectory=monitoriq
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

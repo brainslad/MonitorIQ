@@ -1,0 +1,29 @@
+{{template "top" .}}{{$csrf := .CSRF}}
+<div class="page-head"><h1>Serviços <span class="muted">({{.Data.Total}})</span></h1><div class="actions"><a class="btn primary" href="/admin/monitors/new">+ Novo serviço</a></div></div>
+{{range .Data.Groups}}
+<section class="card group">
+  <div class="group-head"><h2>{{.HostName}}</h2><span class="muted mono">{{.Address}}</span></div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th></th><th>Nome</th><th>Tipo</th><th class="hide-sm">Alvo</th><th class="num hide-sm">Intervalo</th><th></th></tr></thead>
+    <tbody>
+    {{range .Monitors}}
+    <tr class="{{if not .Enabled}}paused{{end}}">
+      <td>{{template "dot" .DisplayStatus}}</td>
+      <td><a href="/monitors/{{.ID}}"><strong>{{.Name}}</strong></a></td>
+      <td class="muted">{{typeLabel .Type}}</td>
+      <td class="mono small hide-sm">{{.EffectiveTarget}}{{if .Port}}:{{.Port}}{{end}}</td>
+      <td class="num hide-sm">{{.IntervalSeconds}}s</td>
+      <td class="row-actions">
+        <form method="post" action="/admin/monitors/{{.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/admin/monitors"><button class="btn small">{{if .Enabled}}Pausar{{else}}Retomar{{end}}</button></form>
+        <a class="btn small" href="/admin/monitors/{{.ID}}/edit">Editar</a>
+        <form method="post" action="/admin/monitors/{{.ID}}/delete" data-confirm="Apagar o serviço {{.Name}} e todo o seu histórico?">{{template "csrf" $csrf}}<button class="btn small danger">Apagar</button></form>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table></div>
+</section>
+{{else}}
+<div class="card empty"><p>Ainda não existem serviços. <a href="/admin/monitors/new">Criar o primeiro</a>.</p></div>
+{{end}}
+{{template "bottom" .}}

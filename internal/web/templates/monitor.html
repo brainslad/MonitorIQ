@@ -1,0 +1,86 @@
+{{template "top" .}}
+{{$m := .Data.M}}{{$u := .Data.Uptimes}}{{$csrf := .CSRF}}
+<div class="page-head">
+  <div>
+    <div class="crumbs muted"><a href="/">Dashboard</a> / {{$m.HostName}}</div>
+    <h1>{{template "dot" $m.DisplayStatus}} {{$m.Name}}</h1>
+    <div class="muted">{{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · a cada {{$m.IntervalSeconds}}s</div>
+  </div>
+  <div class="actions">
+    <form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Verificar agora</button></form>
+    <form method="post" action="/admin/monitors/{{$m.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/monitors/{{$m.ID}}"><button class="btn">{{if $m.Enabled}}Pausar{{else}}Retomar{{end}}</button></form>
+    <a class="btn primary" href="/admin/monitors/{{$m.ID}}/edit">Editar</a>
+  </div>
+</div>
+
+<section class="summary">
+  <div class="stat {{statusClass $m.DisplayStatus}}"><span class="num">{{if $m.Enabled}}{{statusLabel $m.Status}}{{else}}Pausado{{end}}</span><span>{{if $m.StatusChangedAt}}desde {{fmtTime $m.StatusChangedAt}}{{else}}estado atual{{end}}</span></div>
+  <div class="stat"><span class="num">{{index $u "24h"}}</span><span>Uptime 24h</span></div>
+  <div class="stat"><span class="num">{{index $u "7d"}}</span><span>Uptime 7 dias</span></div>
+  <div class="stat"><span class="num">{{index $u "30d"}}</span><span>Uptime 30 dias</span></div>
+  <div class="stat"><span class="num">{{index $u "365d"}}</span><span>Uptime 1 ano</span></div>
+  <div class="stat"><span class="num">{{fmtMs $m.LastLatencyMs}}</span><span>Última latência</span></div>
+</section>
+
+<div class="card">
+  <p class="m0"><strong>Última verificação:</strong> {{ago $m.LastCheckedAt}} — {{$m.LastMessage}}</p>
+</div>
+
+<section class="card">
+  <div class="group-head">
+    <h2>Latência e disponibilidade</h2>
+    <div class="ranges" data-chart-ranges>
+      <button data-range="1h">1h</button><button data-range="24h" class="active">24h</button><button data-range="7d">7d</button><button data-range="30d">30d</button><button data-range="90d">90d</button><button data-range="1y">1 ano</button><button data-range="2y">2 anos</button>
+    </div>
+  </div>
+  <div class="chart-box"><canvas id="chart" data-series="/api/monitors/{{$m.ID}}/series"></canvas></div>
+</section>
+
+{{with .Data.Latest}}{{with .Details}}
+<section class="card">
+  <h2>Detalhes da última verificação</h2>
+  {{if hops .}}
+  <div class="table-wrap"><table class="table compact">
+    <thead><tr><th>Salto</th><th>Endereço</th><th class="num">RTT</th></tr></thead>
+    <tbody>{{range hops .}}<tr><td>{{index . "ttl"}}</td><td class="mono">{{with index . "address"}}{{.}}{{else}}*{{end}}</td><td class="num">{{rtts (index . "rtts")}}</td></tr>{{end}}</tbody>
+  </table></div>
+  {{else}}
+  <dl class="kv">
+    {{with detail . "status_code"}}<dt>Código HTTP</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "final_url"}}<dt>URL final</dt><dd class="mono">{{.}}</dd>{{end}}
+    {{with detail . "subject"}}<dt>Certificado</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "issuer"}}<dt>Emissor</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "not_after"}}<dt>Expira em</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "days_left"}}<dt>Dias restantes</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "cert_days_left"}}<dt>Dias até expirar o certificado</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "dns_names"}}<dt>Nomes (SAN)</dt><dd class="mono">{{join .}}</dd>{{end}}
+    {{with detail . "record_type"}}<dt>Registo</dt><dd>{{.}}</dd>{{end}}
+    {{with detail . "answers"}}<dt>Respostas</dt><dd class="mono">{{join .}}</dd>{{end}}
+    {{with detail . "loss_pct"}}<dt>Perda de pacotes</dt><dd>{{.}}%</dd>{{end}}
+    {{with detail . "rtt_min"}}<dt>RTT mín.</dt><dd>{{fmtMs .}}</dd>{{end}}
+    {{with detail . "rtt_max"}}<dt>RTT máx.</dt><dd>{{fmtMs .}}</dd>{{end}}
+    {{with detail . "tls"}}<dt>TLS</dt><dd>{{.}}</dd>{{end}}
+  </dl>
+  {{end}}
+</section>
+{{end}}{{end}}
+
+<div class="grid2">
+<section class="card">
+  <h2>Eventos</h2>
+  {{if .Data.Events}}
+  <ul class="events">
+  {{range .Data.Events}}<li>{{template "badge" .To}} <span class="muted small">{{fmtTime .CreatedAt}} {{if ne (statusClass .To) "up"}}· duração {{between .CreatedAt .EndedAt}}{{end}}</span><div class="small">{{.Message}}</div></li>{{end}}
+  </ul>
+  {{else}}<p class="muted">Sem mudanças de estado registadas.</p>{{end}}
+</section>
+<section class="card">
+  <h2>Verificações recentes</h2>
+  <div class="table-wrap scroll"><table class="table compact">
+    <thead><tr><th></th><th>Hora</th><th class="num">Latência</th><th>Mensagem</th></tr></thead>
+    <tbody>{{range .Data.Results}}<tr><td>{{template "dot" .Status}}</td><td class="nowrap small">{{fmtTime .CheckedAt}}</td><td class="num">{{fmtMs .LatencyMs}}</td><td class="small">{{.Message}}</td></tr>{{else}}<tr><td colspan="4" class="muted">Ainda sem resultados.</td></tr>{{end}}</tbody>
+  </table></div>
+</section>
+</div>
+<script src="/static/chart.umd.min.js"></script>
+{{template "bottom" .}}
