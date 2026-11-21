@@ -4,7 +4,7 @@
   <div>
     <div class="crumbs muted"><a href="/">Dashboard</a> / {{$m.HostName}}</div>
     <h1>{{template "dot" $m.DisplayStatus}} {{$m.Name}}</h1>
-    <div class="muted">{{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · a cada {{$m.IntervalSeconds}}s</div>
+    <div class="muted">{{template "tbadge" $m.Type}} {{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · a cada {{$m.IntervalSeconds}}s</div>
   </div>
   <div class="actions">
     <form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Verificar agora</button></form>
@@ -33,7 +33,7 @@
       <button data-range="1h">1h</button><button data-range="24h" class="active">24h</button><button data-range="7d">7d</button><button data-range="30d">30d</button><button data-range="90d">90d</button><button data-range="1y">1 ano</button><button data-range="2y">2 anos</button>
     </div>
   </div>
-  <div class="chart-box"><canvas id="chart" data-series="/api/monitors/{{$m.ID}}/series"></canvas></div>
+  <div class="chart-box monitor-chart"><canvas id="chart" data-series="/api/monitors/{{$m.ID}}/series"></canvas></div>
 </section>
 
 {{with .Data.Latest}}{{with .Details}}

@@ -94,6 +94,30 @@ func monitorIDs(list []store.Monitor) []int64 {
 	return ids
 }
 
+type dashKPI struct {
+	Total, Up, Degraded, Down, Unknown, Paused int
+	Uptime24, Uptime30                         float64 // -1 without data
+	RespAvg                                    float64 // -1 without data
+	SlowestName                                string
+	SlowestMs                                  float64
+	OpenIncidents, Incidents24h                int
+	BarUp, BarDegraded, BarDown, BarPaused     float64 // stacked bar widths in %
+}
+
+func avg(m map[int64]float64, ids []int64) float64 {
+	sum, n := 0.0, 0
+	for _, id := range ids {
+		if v, ok := m[id]; ok {
+			sum += v
+			n++
+		}
+	}
+	if n == 0 {
+		return -1
+	}
+	return sum / float64(n)
+}
+
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	list, err := s.Store.ListMonitors(ctx)
@@ -101,6 +125,23 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
+	// Problems first, then by host and name.
+	rank := func(m store.Monitor) int {
+		if !m.Enabled {
+			return 4
+		}
+		switch m.Status {
+		case checks.Down:
+			return 0
+		case checks.Degraded:
+			return 1
+		case checks.Unknown:
+			return 2
+		}
+		return 3
+	}
+	sort.SliceStable(list, func(i, j int) bool { return rank(list[i]) < rank(list[j]) })
+
 	ids := monitorIDs(list)
 	now := time.Now()
 	up24, err := s.Store.UptimeSince(ctx, ids, now.Add(-24*time.Hour))
@@ -113,34 +154,85 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	sparks, err := s.Store.Sparklines(ctx, ids)
+	bars, err := s.Store.HourlyBars(ctx, ids, 24)
 	if err != nil {
 		s.serverError(w, err)
 		return
 	}
-	events, err := s.Store.ListEvents(ctx, nil, now.AddDate(0, 0, -7), 15)
+	incidents, err := s.Store.Incidents(ctx, now.AddDate(0, 0, -7), 20)
 	if err != nil {
 		s.serverError(w, err)
 		return
 	}
-	counts := map[string]int{"up": 0, "degraded": 0, "down": 0, "unknown": 0, "paused": 0}
+
+	k := dashKPI{Total: len(list), SlowestMs: -1}
+	var active []int64
+	types := map[string]bool{}
+	latSum, latN := 0.0, 0
 	for _, m := range list {
+		types[m.Type] = true
 		if !m.Enabled {
-			counts["paused"]++
+			k.Paused++
 			continue
 		}
-		counts[m.Status.String()]++
+		active = append(active, m.ID)
+		switch m.Status {
+		case checks.Up:
+			k.Up++
+		case checks.Degraded:
+			k.Degraded++
+			k.OpenIncidents++
+		case checks.Down:
+			k.Down++
+			k.OpenIncidents++
+		default:
+			k.Unknown++
+		}
+		if m.Status != checks.Down && m.LastLatencyMs != nil {
+			latSum += *m.LastLatencyMs
+			latN++
+			if *m.LastLatencyMs > k.SlowestMs {
+				k.SlowestMs, k.SlowestName = *m.LastLatencyMs, m.Name
+			}
+		}
 	}
-	hosts, err := s.Store.ListHosts(ctx)
+	k.Uptime24, k.Uptime30, k.RespAvg = avg(up24, active), avg(up30, active), -1
+	if latN > 0 {
+		k.RespAvg = latSum / float64(latN)
+	}
+	for _, e := range incidents {
+		if e.CreatedAt.After(now.Add(-24 * time.Hour)) {
+			k.Incidents24h++
+		}
+	}
+	if k.Total > 0 {
+		t := float64(k.Total)
+		k.BarUp, k.BarDegraded, k.BarDown = float64(k.Up)*100/t, float64(k.Degraded)*100/t, float64(k.Down)*100/t
+		k.BarPaused = float64(k.Paused+k.Unknown) * 100 / t
+	}
+	var typeList []string
+	for _, t := range checks.Types {
+		if types[t.Key] {
+			typeList = append(typeList, t.Key)
+		}
+	}
+	p := &page{Title: "Dashboard", Active: "dashboard", Data: map[string]any{
+		"Monitors": list, "Up24": up24, "Up30": up30, "Bars": bars, "K": k,
+		"Incidents": incidents, "Types": typeList, "Now": now,
+	}}
+	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
+}
+
+func (s *Server) handleDashboardSeries(w http.ResponseWriter, r *http.Request) {
+	pts, err := s.Store.ResponseSeries(r.Context(), time.Now().Add(-24*time.Hour), 600)
 	if err != nil {
 		s.serverError(w, err)
 		return
 	}
-	p := &page{Title: "Dashboard", Active: "dashboard", Refresh: 30, Data: map[string]any{
-		"Groups": groupByHost(list), "Up24": up24, "Up30": up30, "Sparks": sparks,
-		"Counts": counts, "Total": len(list), "Events": events, "HostCount": len(hosts),
-	}}
-	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
+	if pts == nil {
+		pts = []store.Point{}
+	}
+	writeJSON(w, map[string]any{"points": pts})
 }
 
 func (s *Server) handleMonitorDetail(w http.ResponseWriter, r *http.Request) {

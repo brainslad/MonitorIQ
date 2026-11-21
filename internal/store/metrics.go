@@ -342,3 +342,74 @@ func (s *Store) DeleteStatusPage(ctx context.Context, id int64) error {
 	_, err := s.Pool.Exec(ctx, `DELETE FROM status_pages WHERE id=$1`, id)
 	return err
 }
+
+// HourlyBars returns the last `hours` hourly buckets (oldest first) per monitor.
+func (s *Store) HourlyBars(ctx context.Context, ids []int64, hours int) (map[int64][]DayStat, error) {
+	start := time.Now().Truncate(time.Hour).Add(-time.Duration(hours-1) * time.Hour)
+	out := map[int64][]DayStat{}
+	for _, id := range ids {
+		list := make([]DayStat, hours)
+		for i := range list {
+			list[i].Day = start.Add(time.Duration(i) * time.Hour)
+		}
+		out[id] = list
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT monitor_id, bucket, total, up, degraded, down FROM check_results_hourly
+		WHERE monitor_id = ANY($1) AND bucket >= $2`, ids, start)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		var b time.Time
+		var t, u, dg, dn int
+		if err := rows.Scan(&id, &b, &t, &u, &dg, &dn); err != nil {
+			return nil, err
+		}
+		idx := int(b.Sub(start).Hours() + 0.5)
+		if list, ok := out[id]; ok && idx >= 0 && idx < len(list) {
+			list[idx].Total += t
+			list[idx].Up += u
+			list[idx].Degraded += dg
+			list[idx].Down += dn
+		}
+	}
+	return out, rows.Err()
+}
+
+// ResponseSeries returns the average latency across all enabled monitors in
+// buckets of `bucket` seconds since `since`.
+func (s *Store) ResponseSeries(ctx context.Context, since time.Time, bucket int) ([]Point, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT to_timestamp(floor(extract(epoch FROM r.checked_at) / $2) * $2) AS t,
+		avg(r.latency_ms), min(r.latency_ms), max(r.latency_ms),
+		avg(CASE WHEN r.status = 3 THEN 0.0 ELSE 100.0 END), 0::smallint
+		FROM check_results r JOIN monitors m ON m.id = r.monitor_id
+		WHERE m.enabled AND r.checked_at >= $1
+		GROUP BY t ORDER BY t`, since, bucket)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Point, error) {
+		var p Point
+		err := r.Scan(&p.T, &p.Avg, &p.Min, &p.Max, &p.Uptime, &p.Status)
+		return p, err
+	})
+}
+
+// Incidents returns transitions to degraded/down since `since`, newest first.
+func (s *Store) Incidents(ctx context.Context, since time.Time, limit int) ([]Event, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT e.id, e.monitor_id, m.name, e.created_at, e.from_status, e.to_status, e.message,
+		(SELECT min(n.created_at) FROM events n WHERE n.monitor_id = e.monitor_id AND n.created_at > e.created_at AND n.to_status = 1)
+		FROM events e JOIN monitors m ON m.id = e.monitor_id
+		WHERE e.to_status IN (2,3) AND e.created_at >= $1
+		ORDER BY e.created_at DESC LIMIT $2`, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Event, error) {
+		var e Event
+		err := r.Scan(&e.ID, &e.MonitorID, &e.MonitorName, &e.CreatedAt, &e.From, &e.To, &e.Message, &e.EndedAt)
+		return e, err
+	})
+}

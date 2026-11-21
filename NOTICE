@@ -1,0 +1,12 @@
+MonitorIQ — monitorização de uptime e serviços
+Copyright (C) 2026 MonitorIQ contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See the LICENSE file.
+
+Third-party components bundled in internal/web/static/:
+- Chart.js v4.4.1, (c) 2023 Chart.js Contributors, MIT License.
+- JetBrains Mono font, (c) 2020 The JetBrains Mono Project Authors,
+  SIL Open Font License 1.1 (see fonts/OFL.txt).

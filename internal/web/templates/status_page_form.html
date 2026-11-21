@@ -18,7 +18,7 @@
     {{range $i, $o := .Data.Options}}
     <tr>
       <td><input type="checkbox" name="monitor" value="{{$o.M.ID}}" {{if $o.Selected}}checked{{end}} aria-label="Incluir {{$o.M.Name}}"></td>
-      <td>{{$o.M.HostName}} · <strong>{{$o.M.Name}}</strong> <span class="muted small">{{typeLabel $o.M.Type}}</span></td>
+      <td>{{$o.M.HostName}} · <strong>{{$o.M.Name}}</strong> {{template "tbadge" $o.M.Type}}</td>
       <td><input name="name_{{$o.M.ID}}" value="{{$o.DisplayName}}" placeholder="{{$o.M.Name}}"></td>
       <td class="num"><input class="narrow" name="pos_{{$o.M.ID}}" type="number" value="{{add $i 1}}"></td>
     </tr>

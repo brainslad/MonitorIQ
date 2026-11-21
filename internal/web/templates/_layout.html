@@ -7,12 +7,17 @@
 <title>{{.Title}} · MonitorIQ</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/app.css">
+<script src="/static/theme.js"></script>
 </head>{{end}}
 
 {{define "top"}}{{template "head" .}}
 <body>
-<header class="topbar">
-  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="24" height="24"> MonitorIQ</a>
+<div class="shell">
+<header class="topbar card">
+  <a class="brand" href="/">
+    <span class="logo"><img src="/static/favicon.svg" alt="" width="22" height="22"></span>
+    <span><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">monitorização de uptime e serviços</span></span>
+  </a>
   {{if .User}}
   <nav class="nav">
     <a href="/" class="{{if eq .Active "dashboard"}}active{{end}}">Dashboard</a>
@@ -22,24 +27,38 @@
     <a href="/admin/users" class="{{if eq .Active "users"}}active{{end}}">Utilizadores</a>
     <a href="/admin/settings" class="{{if eq .Active "settings"}}active{{end}}">Definições</a>
   </nav>
-  <form method="post" action="/logout" class="logout">
-    <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <span class="muted">{{.User.Username}}</span>
-    <button class="btn small ghost" type="submit">Sair</button>
-  </form>
   {{end}}
+  <div class="top-right">
+    {{block "topstatus" .}}{{end}}
+    <div class="top-tools">
+      <button type="button" class="icon-btn" data-theme-toggle title="Alternar modo claro/escuro" aria-label="Alternar modo claro/escuro">
+        <svg class="i-sun" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      {{if .User}}
+      <form method="post" action="/logout" class="logout">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <span class="muted small">{{.User.Username}}</span>
+        <button class="btn small" type="submit">Sair</button>
+      </form>
+      {{end}}
+    </div>
+  </div>
 </header>
-<main class="container">
+<main>
 {{if .Flash}}<div class="flash {{if .FlashOK}}ok{{else}}err{{end}}" role="status">{{.Flash}}</div>{{end}}
 {{end}}
 
 {{define "bottom"}}
 </main>
-<footer class="footer muted">MonitorIQ {{.Version}}</footer>
+<footer class="footer muted small">MonitorIQ {{.Version}}</footer>
+</div>
 <script src="/static/app.js"></script>
 </body>
 </html>{{end}}
 
 {{define "dot"}}<span class="dot {{statusClass .}}" title="{{statusLabel .}}"></span>{{end}}
+{{define "tbadge"}}<span class="tbadge t-{{.}}">{{upper .}}</span>{{end}}
+{{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
 {{define "badge"}}<span class="badge {{statusClass .}}">{{statusLabel .}}</span>{{end}}
 {{define "csrf"}}<input type="hidden" name="csrf" value="{{.}}">{{end}}

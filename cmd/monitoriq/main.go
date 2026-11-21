@@ -1,4 +1,6 @@
 // Command monitoriq is a self-hosted uptime and service monitoring server.
+//
+// Copyright (C) 2026 MonitorIQ contributors. Licensed under the GNU GPL v3 or later; see LICENSE.
 package main
 
 import (
