@@ -1,0 +1,12 @@
+{{template "head" .}}
+<body class="center-page">
+<form class="card login" method="post" action="/login">
+  <h1 class="brand big"><img src="/static/favicon.svg" alt="" width="32" height="32"> MonitorIQ</h1>
+  {{if .Flash}}<div class="flash err">{{.Flash}}</div>{{end}}
+  <input type="hidden" name="next" value="{{.Data.Next}}">
+  <label>Utilizador<input name="username" autocomplete="username" required autofocus value="{{.Data.Username}}"></label>
+  <label>Palavra-passe<input name="password" type="password" autocomplete="current-password" required></label>
+  <button class="btn primary wide" type="submit">Entrar</button>
+</form>
+</body>
+</html>

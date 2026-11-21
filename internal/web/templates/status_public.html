@@ -1,0 +1,34 @@
+{{template "head" .}}{{$v := .Data.V}}
+<body class="public">
+<main class="container narrow-page">
+  <header class="public-head">
+    <h1>{{$v.Page.Title}}</h1>
+    {{with $v.Page.Description}}<p class="muted">{{.}}</p>{{end}}
+  </header>
+  {{if not $v.Page.Published}}<div class="flash err">Pré-visualização: esta página não está publicada.</div>{{end}}
+  <div class="overall {{statusClass $v.Overall}}">{{template "dot" $v.Overall}} {{$v.Headline}}</div>
+
+  <section class="card">
+  {{range $v.Monitors}}
+    <div class="svc">
+      <div class="svc-head"><strong>{{.Name}}</strong><span class="svc-status {{statusClass .Status}}">{{statusLabel .Status}}</span></div>
+      <div class="bars" aria-label="Disponibilidade dos últimos 90 dias">
+        {{range .Days}}<span class="bar {{.Level}}" title="{{fmtDate .Day}}: {{if ge .Total 1}}{{pctVal .Uptime}}{{else}}sem dados{{end}}"></span>{{end}}
+      </div>
+      <div class="bars-legend muted small"><span class="d90">90 dias</span><span class="d30">30 dias</span><span>{{pctVal .Uptime}} uptime</span><span>Hoje</span></div>
+    </div>
+  {{else}}<p class="muted">Sem serviços nesta página.</p>{{end}}
+  </section>
+
+  <section class="card">
+    <h2>Incidentes recentes (14 dias)</h2>
+    {{if $v.Events}}
+    <ul class="events">
+      {{range $v.Events}}<li>{{template "badge" .To}} <strong>{{.MonitorName}}</strong> <span class="muted small">{{fmtTime .CreatedAt}} · {{if .EndedAt}}resolvido após {{between .CreatedAt .EndedAt}}{{else}}em curso há {{since .CreatedAt}}{{end}}</span></li>{{end}}
+    </ul>
+    {{else}}<p class="muted">Sem incidentes registados.</p>{{end}}
+  </section>
+  <footer class="footer muted small">Atualizado em {{fmtTime $v.Updated}} · <a href="/api/status/{{$v.Page.Slug}}">JSON</a> · Powered by MonitorIQ</footer>
+</main>
+</body>
+</html>

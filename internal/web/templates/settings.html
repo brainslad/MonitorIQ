@@ -1,0 +1,25 @@
+{{template "top" .}}{{$r := .Data.R}}{{$s := .Data.Stats}}
+<div class="page-head"><h1>Definições</h1></div>
+<div class="grid2">
+<form class="card form" method="post" action="/admin/settings">
+  <h2>Retenção de dados</h2>
+  {{template "csrf" .CSRF}}
+  <p class="muted small">Os dados mais antigos do que estes períodos são apagados automaticamente (de hora a hora). O máximo é {{.Data.Max}} dias (2 anos).</p>
+  <label>Resultados detalhados de cada verificação (dias)<input name="raw_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.RawDays}}"></label>
+  <label>Agregados horários: gráficos e uptime de longo prazo (dias)<input name="aggregate_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.AggregateDays}}"></label>
+  <label>Eventos / incidentes (dias)<input name="events_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.EventsDays}}"></label>
+  <div class="form-actions"><button class="btn primary">Guardar</button></div>
+</form>
+<section class="card">
+  <h2>Base de dados</h2>
+  <dl class="kv">
+    <dt>Tamanho</dt><dd>{{printf "%.1f" .Data.SizeMB}} MB</dd>
+    <dt>Resultados detalhados</dt><dd>{{$s.Results}}</dd>
+    <dt>Agregados horários</dt><dd>{{$s.Hourly}}</dd>
+    <dt>Eventos</dt><dd>{{$s.Events}}</dd>
+    <dt>Resultado mais antigo</dt><dd>{{fmtTime $s.OldestResult}}</dd>
+  </dl>
+  <form method="post" action="/admin/settings/purge" data-confirm="Apagar agora os dados fora do período de retenção?">{{template "csrf" .CSRF}}<button class="btn">Executar limpeza agora</button></form>
+</section>
+</div>
+{{template "bottom" .}}
