@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/checks"
 	"github.com/brainslad/monitoriq/internal/config"
 	"github.com/brainslad/monitoriq/internal/scheduler"
@@ -39,7 +40,10 @@ Usage:
   monitoriq migrate                       apply database migrations
   monitoriq user set <username>           create a user or reset its password
                     [--password X]        (prompted on the terminal without --password)
-  monitoriq user list                     list users
+  monitoriq user list                     list users (with sign-in source and 2FA)
+  monitoriq user reset-2fa <username>     turn off two-factor authentication for a user
+  monitoriq auth local-login on           show the password form again if SSO-only
+                                          sign-in locks you out
   monitoriq check <type> <target> [port]  run a one-off check (diagnostics)
   monitoriq version                       print the version
 
@@ -78,6 +82,8 @@ func main() {
 		fmt.Println("Database is up to date.")
 	case "user":
 		userCmd(args[1:])
+	case "auth":
+		authCmd(args[1:])
 	case "check":
 		checkCmd(args[1:])
 	case "version", "--version", "-v":
@@ -136,7 +142,13 @@ func serve() {
 		}
 	}
 
-	srv, err := web.New(st, cfg, log)
+	box, keySrc, err := auth.LoadBox(cfg.SecretKey, cfg.DataDir)
+	if err != nil {
+		fatal("secret key: %v", err)
+	}
+	log.Info("secret key loaded", "from", keySrc)
+
+	srv, err := web.New(st, cfg, box, log)
 	if err != nil {
 		fatal("%v", err)
 	}
@@ -180,7 +192,7 @@ func randomPassword() string {
 
 func userCmd(args []string) {
 	if len(args) == 0 {
-		fatal("usage: monitoriq user set <username> [--password X] | monitoriq user list")
+		fatal("usage: monitoriq user set <username> [--password X] | monitoriq user list | monitoriq user reset-2fa <username>")
 	}
 	st := openStore()
 	defer st.Close()
@@ -195,8 +207,24 @@ func userCmd(args []string) {
 			fatal("%v", err)
 		}
 		for _, u := range users {
-			fmt.Println(u.Username)
+			tfa := "2fa-off"
+			if u.TOTPEnabled {
+				tfa = "2fa-on"
+			}
+			fmt.Printf("%-24s %-6s %s\n", u.Username, u.Source, tfa)
 		}
+	case "reset-2fa":
+		if len(args) < 2 {
+			fatal("enter the username")
+		}
+		u, err := st.GetUserByUsername(ctx, args[1])
+		if err != nil {
+			fatal("user %q not found", args[1])
+		}
+		if err := st.ResetTOTP(ctx, u.ID); err != nil {
+			fatal("%v", err)
+		}
+		fmt.Printf("Two-factor authentication turned off for %q; the user was signed out.\n", u.Username)
 	case "set":
 		fs := flag.NewFlagSet("user set", flag.ExitOnError)
 		pw := fs.String("password", "", "password")
@@ -217,6 +245,40 @@ func userCmd(args []string) {
 	default:
 		fatal("unknown subcommand: %s", args[0])
 	}
+}
+
+func authCmd(args []string) {
+	if len(args) != 2 || args[0] != "local-login" || (args[1] != "on" && args[1] != "off") {
+		fatal("usage: monitoriq auth local-login on|off")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		fatal("%v", err)
+	}
+	box, _, err := auth.LoadBox(cfg.SecretKey, cfg.DataDir)
+	if err != nil {
+		fatal("secret key: %v", err)
+	}
+	st := openStore()
+	defer st.Close()
+	ctx := context.Background()
+	raw, err := st.GetSetting(ctx, auth.SettingsKey)
+	if err != nil {
+		fatal("%v", err)
+	}
+	as, err := auth.LoadSettings(raw, box)
+	if err != nil {
+		fatal("%v", err)
+	}
+	as.OIDC.HideLocalLogin = args[1] == "off"
+	enc, err := as.Encode(box)
+	if err == nil {
+		err = st.SetSetting(ctx, auth.SettingsKey, enc)
+	}
+	if err != nil {
+		fatal("%v", err)
+	}
+	fmt.Printf("Username/password form on the sign-in page: %s.\n", args[1])
 }
 
 func checkCmd(args []string) {

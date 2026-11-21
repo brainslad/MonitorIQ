@@ -1,5 +1,6 @@
 {{template "top" .}}{{$r := .Data.R}}{{$s := .Data.Stats}}
 <div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "retention"}}
 <div class="grid2">
 <form class="card form" method="post" action="/admin/settings">
   <h2>Data retention</h2>

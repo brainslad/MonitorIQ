@@ -40,7 +40,7 @@ func (s *Server) loadPublic(r *http.Request) (*publicView, error) {
 		if cerr != nil {
 			return nil, store.ErrNotFound
 		}
-		if _, _, err := s.Store.SessionUser(ctx, c.Value); err != nil {
+		if sess, err := s.Store.GetSession(ctx, c.Value); err != nil || sess.MFA != store.MFADone {
 			return nil, store.ErrNotFound
 		}
 	}

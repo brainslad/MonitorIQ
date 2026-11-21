@@ -15,6 +15,7 @@ type Config struct {
 	Listen         string
 	BaseURL        string
 	SecretKey      string
+	DataDir        string
 	CookieSecure   bool
 	MaxConcurrency int
 	TrustProxy     bool
@@ -75,6 +76,7 @@ func Load() (*Config, error) {
 		Listen:       env("MONITORIQ_LISTEN", "127.0.0.1:8080"),
 		BaseURL:      strings.TrimRight(env("MONITORIQ_BASE_URL", ""), "/"),
 		SecretKey:    env("MONITORIQ_SECRET_KEY", ""),
+		DataDir:      env("MONITORIQ_DATA_DIR", "/var/lib/monitoriq"),
 		CookieSecure: envBool("MONITORIQ_COOKIE_SECURE", strings.HasPrefix(env("MONITORIQ_BASE_URL", ""), "https://")),
 		TrustProxy:   envBool("MONITORIQ_TRUST_PROXY", false),
 	}

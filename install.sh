@@ -197,6 +197,13 @@ EOF
   chown root:monitoriq "$ENV_FILE"; chmod 0640 "$ENV_FILE"
   ok "Configuration written to $ENV_FILE"
 fi
+# Key that encrypts 2FA secrets and LDAP/SSO credentials in the database
+# (added on upgrade from versions without it). Never change it afterwards.
+if ! grep -q '^MONITORIQ_SECRET_KEY=.' "$ENV_FILE"; then
+  sed -i '/^MONITORIQ_SECRET_KEY=$/d' "$ENV_FILE"
+  printf '\n# Encrypts 2FA secrets and LDAP/SSO credentials. Keep it safe; do not change it.\nMONITORIQ_SECRET_KEY=%s\n' "$(rand_secret 48)" >>"$ENV_FILE"
+  ok "Secret key generated in $ENV_FILE"
+fi
 
 install -m 0644 "$SCRIPT_DIR/deploy/systemd/monitoriq.service" "$UNIT_DST"
 systemctl daemon-reload
@@ -205,7 +212,7 @@ info "Applying database migrations"
 runuser -u monitoriq -- "$BIN_DST" --env "$ENV_FILE" migrate
 
 ADMIN_PW=""
-if [[ $FIRST_INSTALL -eq 1 ]] && ! runuser -u monitoriq -- "$BIN_DST" --env "$ENV_FILE" user list | grep -qx admin; then
+if [[ $FIRST_INSTALL -eq 1 ]] && ! runuser -u monitoriq -- "$BIN_DST" --env "$ENV_FILE" user list | grep -q '^admin '; then
   ADMIN_PW="$(rand_secret 16)"
   runuser -u monitoriq -- "$BIN_DST" --env "$ENV_FILE" user set admin --password "$ADMIN_PW" >/dev/null
 fi
