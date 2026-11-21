@@ -1,0 +1,26 @@
+{{template "top" .}}{{$r := .Data.R}}{{$s := .Data.Stats}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "retention"}}
+<div class="grid2">
+<form class="card form" method="post" action="/admin/settings">
+  <h2>Data retention</h2>
+  {{template "csrf" .CSRF}}
+  <p class="muted small">Data older than these periods is deleted automatically (every hour). The maximum is {{.Data.Max}} days (2 years).</p>
+  <label>Raw results of every check (days)<input name="raw_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.RawDays}}"></label>
+  <label>Hourly aggregates: long-term charts and uptime (days)<input name="aggregate_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.AggregateDays}}"></label>
+  <label>Events / incidents (days)<input name="events_retention_days" type="number" min="1" max="{{.Data.Max}}" value="{{$r.EventsDays}}"></label>
+  <div class="form-actions"><button class="btn primary">Save</button></div>
+</form>
+<section class="card">
+  <h2>Database</h2>
+  <dl class="kv">
+    <dt>Size</dt><dd>{{printf "%.1f" .Data.SizeMB}} MB</dd>
+    <dt>Raw results</dt><dd>{{$s.Results}}</dd>
+    <dt>Hourly aggregates</dt><dd>{{$s.Hourly}}</dd>
+    <dt>Events</dt><dd>{{$s.Events}}</dd>
+    <dt>Oldest result</dt><dd>{{fmtTime $s.OldestResult}}</dd>
+  </dl>
+  <form method="post" action="/admin/settings/purge" data-confirm="Delete data outside the retention period now?">{{template "csrf" .CSRF}}<button class="btn">Run cleanup now</button></form>
+</section>
+</div>
+{{template "bottom" .}}

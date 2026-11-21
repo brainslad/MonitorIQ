@@ -1,0 +1,21 @@
+{{template "top" .}}{{$csrf := .CSRF}}
+<div class="page-head"><h1>Hosts</h1><div class="actions"><a class="btn primary" href="/admin/hosts/new">+ New host</a></div></div>
+<p class="muted">A host is a server, website or device. Each host can have several monitors.</p>
+<section class="card">
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Name</th><th>Address</th><th class="hide-sm">Description</th><th class="num">Monitors</th><th></th></tr></thead>
+  <tbody>
+  {{range .Data.Hosts}}
+  <tr>
+    <td><strong>{{.Name}}</strong></td><td class="mono">{{.Address}}</td><td class="muted hide-sm">{{.Description}}</td><td class="num">{{.MonitorCount}}</td>
+    <td class="row-actions">
+      <a class="btn small" href="/admin/monitors/new?host={{.ID}}">+ Monitor</a>
+      <a class="btn small" href="/admin/hosts/{{.ID}}/edit">Edit</a>
+      <form method="post" action="/admin/hosts/{{.ID}}/delete" data-confirm="Delete host {{.Name}} and all its monitors and history?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
+    </td>
+  </tr>
+  {{else}}<tr><td colspan="5" class="muted">No hosts yet. <a href="/admin/hosts/new">Create the first one</a>.</td></tr>{{end}}
+  </tbody>
+</table></div>
+</section>
+{{template "bottom" .}}
