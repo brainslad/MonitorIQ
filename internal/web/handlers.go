@@ -21,47 +21,6 @@ func safeNext(next string) string {
 	return next
 }
 
-func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "login", "Sign in", "", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
-}
-
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	ip := s.clientIP(r)
-	next := safeNext(r.PostFormValue("next"))
-	fail := func(msg string) {
-		s.renderStatus(w, r, http.StatusUnauthorized, "login", &page{Title: "Sign in", Flash: msg,
-			Data: map[string]any{"Next": next, "Username": r.PostFormValue("username")}})
-	}
-	if s.limiter.blocked(ip) {
-		fail("Too many failed attempts. Please wait 15 minutes.")
-		return
-	}
-	u, err := s.Store.Authenticate(r.Context(), r.PostFormValue("username"), r.PostFormValue("password"))
-	if err != nil {
-		s.limiter.fail(ip)
-		s.Log.Warn("failed login", "username", r.PostFormValue("username"), "ip", ip)
-		fail("Invalid username or password.")
-		return
-	}
-	s.limiter.reset(ip)
-	token, err := s.Store.CreateSession(r.Context(), u.ID, sessionTTL)
-	if err != nil {
-		s.serverError(w, err)
-		return
-	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, Secure: s.Cfg.CookieSecure, MaxAge: int(sessionTTL.Seconds())})
-	http.Redirect(w, r, next, http.StatusSeeOther)
-}
-
-func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
-		_ = s.Store.DeleteSession(r.Context(), c.Value)
-	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1})
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
-}
-
 // ---------------------------------------------------------------- dashboard
 
 type hostGroup struct {
@@ -609,27 +568,6 @@ func (s *Server) handleStatusPageDelete(w http.ResponseWriter, r *http.Request) 
 
 // ---------------------------------------------------------------- users
 
-func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := s.Store.ListUsers(r.Context())
-	if err != nil {
-		s.serverError(w, err)
-		return
-	}
-	s.render(w, r, "users", "Users", "users", map[string]any{"Users": users})
-}
-
-func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
-	if r.PostFormValue("password") != r.PostFormValue("password2") {
-		s.flash(w, r, "/admin/users", false, "Passwords do not match.")
-		return
-	}
-	if _, err := s.Store.CreateUser(r.Context(), r.PostFormValue("username"), r.PostFormValue("password")); err != nil {
-		s.flash(w, r, "/admin/users", false, err.Error())
-		return
-	}
-	s.flash(w, r, "/admin/users", true, "User created.")
-}
-
 func (s *Server) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
 	if id == userFrom(r).ID {
@@ -641,23 +579,6 @@ func (s *Server) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.flash(w, r, "/admin/users", true, "User deleted.")
-}
-
-func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
-	u := userFrom(r)
-	if !s.Store.CheckPassword(r.Context(), u.ID, r.PostFormValue("current")) {
-		s.flash(w, r, "/admin/users", false, "The current password is incorrect.")
-		return
-	}
-	if r.PostFormValue("password") != r.PostFormValue("password2") {
-		s.flash(w, r, "/admin/users", false, "The new passwords do not match.")
-		return
-	}
-	if err := s.Store.SetPassword(r.Context(), u.ID, r.PostFormValue("password")); err != nil {
-		s.flash(w, r, "/admin/users", false, err.Error())
-		return
-	}
-	s.flash(w, r, "/admin/users", true, "Password changed.")
 }
 
 // ---------------------------------------------------------------- settings

@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/config"
 	"github.com/brainslad/monitoriq/internal/store"
 )
@@ -32,7 +33,10 @@ var staticFS embed.FS
 const (
 	sessionCookie = "miq_session"
 	flashCookie   = "miq_flash"
+	oidcCookie    = "miq_oidc"
 	sessionTTL    = 7 * 24 * time.Hour
+	// partialTTL bounds how long a session may wait for its 2FA code.
+	partialTTL = 10 * time.Minute
 )
 
 // Version is set by main.
@@ -42,13 +46,16 @@ type Server struct {
 	Store *store.Store
 	Cfg   *config.Config
 	Log   *slog.Logger
+	Box   *auth.Box
+	OIDC  *auth.OIDC
 
 	pages   map[string]*template.Template
 	limiter *loginLimiter
 }
 
-func New(st *store.Store, cfg *config.Config, log *slog.Logger) (*Server, error) {
-	s := &Server{Store: st, Cfg: cfg, Log: log, pages: map[string]*template.Template{}, limiter: newLoginLimiter()}
+func New(st *store.Store, cfg *config.Config, box *auth.Box, log *slog.Logger) (*Server, error) {
+	s := &Server{Store: st, Cfg: cfg, Log: log, Box: box, OIDC: &auth.OIDC{},
+		pages: map[string]*template.Template{}, limiter: newLoginLimiter()}
 	if err := s.loadTemplates(); err != nil {
 		return nil, err
 	}
@@ -95,9 +102,16 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/status/{slug}", s.handlePublicStatusJSON)
 	mux.HandleFunc("GET /login", s.handleLoginForm)
 	mux.HandleFunc("POST /login", s.handleLogin)
+	mux.HandleFunc("GET /auth/oidc/login", s.handleOIDCLogin)
+	mux.HandleFunc("GET /auth/oidc/callback", s.handleOIDCCallback)
+
+	// Second factor: reachable by sessions that still wait for 2FA.
+	mux.Handle("GET /login/2fa", s.requireSession(true, s.handleTwoFactorForm))
+	mux.Handle("POST /login/2fa", s.requireSession(true, s.handleTwoFactor))
+	mux.Handle("POST /login/cancel", s.requireSession(true, s.handleLogout))
 
 	// Authenticated
-	auth := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.requireAuth(h)) }
+	auth := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.requireSession(false, h)) }
 	auth("POST /logout", s.handleLogout)
 	auth("GET /{$}", s.handleDashboard)
 	auth("GET /monitors/{id}", s.handleMonitorDetail)
@@ -130,11 +144,21 @@ func (s *Server) Handler() http.Handler {
 	auth("GET /admin/users", s.handleUsers)
 	auth("POST /admin/users", s.handleUserCreate)
 	auth("POST /admin/users/{id}/delete", s.handleUserDelete)
-	auth("POST /admin/account/password", s.handlePasswordChange)
+	auth("POST /admin/users/{id}/reset-2fa", s.handleUserReset2FA)
+
+	auth("GET /account", s.handleAccount)
+	auth("POST /account/password", s.handlePasswordChange)
+	auth("POST /account/2fa/enable", s.handleTOTPEnable)
+	auth("POST /account/2fa/disable", s.handleTOTPDisable)
+	auth("POST /account/2fa/recovery", s.handleRecoveryRegenerate)
+	auth("POST /account/sessions/revoke", s.handleRevokeSessions)
 
 	auth("GET /admin/settings", s.handleSettings)
 	auth("POST /admin/settings", s.handleSettingsSave)
 	auth("POST /admin/settings/purge", s.handlePurgeNow)
+	auth("GET /admin/auth", s.handleAuthSettings)
+	auth("POST /admin/auth", s.handleAuthSettingsSave)
+	auth("POST /admin/auth/ldap-test", s.handleLDAPTest)
 
 	return s.securityHeaders(s.logRequests(mux))
 }
@@ -145,7 +169,8 @@ type ctxKey int
 
 const (
 	ctxUser ctxKey = iota
-	ctxCSRF
+	ctxSession
+	ctxToken
 )
 
 func userFrom(r *http.Request) *store.User {
@@ -153,24 +178,50 @@ func userFrom(r *http.Request) *store.User {
 	return u
 }
 
-func csrfFrom(r *http.Request) string {
-	c, _ := r.Context().Value(ctxCSRF).(string)
-	return c
+func sessionFrom(r *http.Request) *store.Session {
+	sess, _ := r.Context().Value(ctxSession).(*store.Session)
+	return sess
 }
 
-func (s *Server) requireAuth(next http.HandlerFunc) http.Handler {
+func csrfFrom(r *http.Request) string {
+	if sess := sessionFrom(r); sess != nil {
+		return sess.CSRF
+	}
+	return ""
+}
+
+func tokenFrom(r *http.Request) string {
+	t, _ := r.Context().Value(ctxToken).(string)
+	return t
+}
+
+// requireSession lets a request through only with a valid session. Sessions
+// that still have to pass 2FA (or set it up) are sent to /login/2fa unless
+// partial is true.
+func (s *Server) requireSession(partial bool, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie(sessionCookie)
 		if err == nil && c.Value != "" {
-			if u, csrf, err := s.Store.SessionUser(r.Context(), c.Value); err == nil {
+			if sess, err := s.Store.GetSession(r.Context(), c.Value); err == nil {
 				if r.Method == http.MethodPost {
-					if subtle.ConstantTimeCompare([]byte(r.PostFormValue("csrf")), []byte(csrf)) != 1 {
+					if subtle.ConstantTimeCompare([]byte(r.PostFormValue("csrf")), []byte(sess.CSRF)) != 1 {
 						http.Error(w, "Invalid request (CSRF). Reload the page and try again.", http.StatusForbidden)
 						return
 					}
 				}
-				ctx := context.WithValue(r.Context(), ctxUser, u)
-				ctx = context.WithValue(ctx, ctxCSRF, csrf)
+				if sess.MFA != store.MFADone && !partial {
+					if strings.HasPrefix(r.URL.Path, "/api/") || r.Method != http.MethodGet {
+						http.Error(w, "Two-factor authentication required", http.StatusUnauthorized)
+						return
+					}
+					http.Redirect(w, r, "/login/2fa?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
+					return
+				}
+				ctx := context.WithValue(r.Context(), ctxSession, sess)
+				ctx = context.WithValue(ctx, ctxToken, c.Value)
+				if sess.MFA == store.MFADone {
+					ctx = context.WithValue(ctx, ctxUser, sess.User)
+				}
 				next(w, r.WithContext(ctx))
 				return
 			}

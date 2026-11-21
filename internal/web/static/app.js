@@ -206,3 +206,66 @@
     load();
   }
 })();
+
+// ---------------------------------------------------------------- authentication pages
+(function () {
+  "use strict";
+  var textOf = function (sel) {
+    var el = document.querySelector(sel);
+    if (!el) return "";
+    if (el.value !== undefined && el.tagName === "INPUT") return el.value;
+    return Array.prototype.map.call(el.querySelectorAll("li"), function (li) { return li.textContent.trim(); }).join("\n");
+  };
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = textOf(b.getAttribute("data-copy"));
+      var done = function () { var o = b.textContent; b.textContent = "Copied"; setTimeout(function () { b.textContent = o; }, 1500); };
+      if (navigator.clipboard) navigator.clipboard.writeText(t).then(done);
+    });
+  });
+  document.querySelectorAll("[data-download]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = "MonitorIQ recovery codes (" + location.host + ")\nEach code can be used once.\n\n" + textOf(b.getAttribute("data-download")) + "\n";
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([t], { type: "text/plain" }));
+      a.download = b.getAttribute("data-filename") || "codes.txt";
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+  });
+  var uf = document.querySelector("[data-user-form]");
+  if (uf) {
+    var sel = uf.querySelector("[data-source]");
+    var sync = function () {
+      var local = !sel || sel.value === "local";
+      uf.querySelectorAll("[data-local-only] input").forEach(function (i) { i.required = local; i.disabled = !local; });
+      uf.querySelector("[data-local-only]").hidden = !local;
+      uf.querySelector("[data-external-only]").hidden = local;
+    };
+    if (sel) sel.addEventListener("change", sync);
+    sync();
+  }
+  var presets = {
+    ad: { url: "ldaps://dc01.example.com:636", user_filter: "ad", username_attr: "sAMAccountName", name_attr: "displayName", email_attr: "mail", nested: true },
+    openldap: { url: "ldaps://ldap.example.com:636", user_filter: "openldap", username_attr: "uid", name_attr: "cn", email_attr: "mail", nested: false }
+  };
+  document.querySelectorAll("[data-ldap-preset]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var p = presets[b.getAttribute("data-ldap-preset")], f = b.form;
+      var set = function (n, v) { var i = f.elements["ldap_" + n]; if (i) i.value = v; };
+      if (!f.elements.ldap_url.value || /example\.com/.test(f.elements.ldap_url.value)) set("url", p.url);
+      var flt = f.elements.ldap_user_filter;
+      flt.value = flt.getAttribute("data-" + p.user_filter);
+      set("username_attr", p.username_attr); set("name_attr", p.name_attr); set("email_attr", p.email_attr);
+      f.elements.ldap_nested.checked = p.nested;
+    });
+  });
+  var tenant = document.querySelector("[data-azure-tenant]");
+  if (tenant) {
+    tenant.addEventListener("input", function () {
+      var f = tenant.form, v = tenant.value.trim();
+      if (!v) return;
+      f.elements.oidc_issuer.value = "https://login.microsoftonline.com/" + v + "/v2.0";
+      if (!f.elements.oidc_button_label.value) f.elements.oidc_button_label.value = "Sign in with Microsoft";
+    });
+  }
+})();

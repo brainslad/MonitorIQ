@@ -1,0 +1,31 @@
+{{template "head" .}}
+<body class="center-page">
+<div class="card login{{if eq .Data.Mode "enroll"}} wide-login{{end}}">
+  <div class="brand big"><span class="logo"><img src="/static/favicon.svg" alt="" width="22" height="22"></span><span><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">Know before your users do.</span></span></div>
+  {{if .Flash}}<div class="flash err">{{.Flash}}</div>{{end}}
+  <form method="post" action="/login/2fa">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    {{if eq .Data.Mode "enroll"}}
+      <h2>Set up two-factor authentication</h2>
+      <p class="muted small">Hi {{.Data.Who}}. This server requires a second factor for every sign-in. It only takes a minute.</p>
+      {{template "totp-setup" .Data.Setup}}
+      <input type="hidden" name="enc" value="{{.Data.Setup.Enc}}">
+      <label>6-digit code<input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required autofocus class="otp"></label>
+      <button class="btn primary wide" type="submit">Turn on and continue</button>
+    {{else}}
+      <h2>Two-factor authentication</h2>
+      <p class="muted small">Hi {{.Data.Who}}. Enter the 6-digit code from your authenticator app.</p>
+      <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required autofocus class="otp" placeholder="123456"></label>
+      <button class="btn primary wide" type="submit">Verify</button>
+      <p class="muted small">Lost your phone? Type one of your recovery codes (like <code>k7qm2-x9fd4</code>) instead.</p>
+    {{end}}
+  </form>
+  <form method="post" action="/login/cancel" class="center">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="linklike small" type="submit">Cancel and sign out</button>
+  </form>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+dn: ou=people,dc=example,dc=org
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=jdoe,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: jdoe
+cn: Jane Doe
+sn: Doe
+mail: jane.doe@example.org
+userPassword: JanePass123
+
+dn: uid=bob,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: bob
+cn: Bob Smith
+sn: Smith
+mail: bob@example.org
+userPassword: BobPass123
+
+dn: cn=monitoriq-admins,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: monitoriq-admins
+member: uid=jdoe,ou=people,dc=example,dc=org

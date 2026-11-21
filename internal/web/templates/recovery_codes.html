@@ -1,0 +1,20 @@
+{{if .Data.Standalone}}{{template "head" .}}
+<body class="center-page">
+<div class="card login wide-login">
+{{else}}{{template "top" .}}
+<div class="page-head"><h1>My account</h1></div>
+<div class="card narrow-card">
+{{end}}
+  <h2>Save your recovery codes</h2>
+  <div class="flash ok">Two-factor authentication is on.</div>
+  <p class="small">If you lose your phone, each of these codes lets you sign in <strong>once</strong>. Store them somewhere safe, such as a password manager. They will not be shown again.</p>
+  <ul class="codes" id="recovery-codes">{{range .Data.Codes}}<li><code>{{.}}</code></li>{{end}}</ul>
+  <div class="form-actions">
+    <button type="button" class="btn" data-copy="#recovery-codes">Copy</button>
+    <button type="button" class="btn" data-download="#recovery-codes" data-filename="monitoriq-recovery-codes.txt">Download</button>
+    <a class="btn primary" href="{{.Data.Next}}">I saved them, continue</a>
+  </div>
+</div>
+{{if .Data.Standalone}}<script src="/static/app.js"></script>
+</body>
+</html>{{else}}{{template "bottom" .}}{{end}}

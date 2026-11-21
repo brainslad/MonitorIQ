@@ -38,7 +38,7 @@
       {{if .User}}
       <form method="post" action="/logout" class="logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <span class="muted small">{{.User.Username}}</span>
+        <a class="small account-link{{if eq .Active "account"}} active{{end}}" href="/account" title="My account and two-factor authentication">{{.User.Username}}{{if .User.TOTPEnabled}} <svg class="shield" viewBox="0 0 24 24" width="13" height="13" aria-label="2FA on"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>{{end}}</a>
         <button class="btn small" type="submit">Sign out</button>
       </form>
       {{end}}
@@ -61,4 +61,16 @@
 {{define "tbadge"}}<span class="tbadge t-{{.}}">{{upper .}}</span>{{end}}
 {{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
 {{define "badge"}}<span class="badge {{statusClass .}}">{{statusLabel .}}</span>{{end}}
+{{define "source"}}{{if eq . "ldap"}}<span class="tbadge t-src">LDAP</span>{{else if eq . "oidc"}}<span class="tbadge t-src">SSO</span>{{else}}<span class="tbadge">LOCAL</span>{{end}}{{end}}
+{{define "settings-tabs"}}<div class="tabs"><a href="/admin/settings" class="{{if eq . "retention"}}active{{end}}">Data retention</a><a href="/admin/auth" class="{{if eq . "auth"}}active{{end}}">Authentication</a></div>{{end}}
+{{define "totp-setup"}}<div class="totp-setup">
+  <img class="qr" src="{{.QR}}" alt="QR code for your authenticator app" width="180" height="180">
+  <div>
+    <ol class="steps small">
+      <li>Open an authenticator app (Microsoft Authenticator, Google Authenticator, 1Password, Bitwarden, Authy…).</li>
+      <li>Scan the QR code, or enter this key manually:<br><code class="secret">{{.Secret}}</code></li>
+      <li>Type the 6-digit code the app shows.</li>
+    </ol>
+  </div>
+</div>{{end}}
 {{define "csrf"}}<input type="hidden" name="csrf" value="{{.}}">{{end}}

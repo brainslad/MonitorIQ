@@ -1,35 +1,49 @@
 {{template "top" .}}{{$csrf := .CSRF}}{{$me := .User}}
-<div class="page-head"><h1>Users</h1></div>
+<div class="page-head"><h1>Users</h1><a class="btn" href="/admin/auth">Authentication settings</a></div>
 <div class="grid2">
 <section class="card">
   <h2>Accounts with back-office access</h2>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>Username</th><th>Last login</th><th></th></tr></thead>
+    <thead><tr><th>User</th><th>Sign-in</th><th>2FA</th><th>Last login</th><th></th></tr></thead>
     <tbody>
     {{range .Data.Users}}
-    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}</td><td class="small muted">{{fmtTime .LastLoginAt}}</td>
-    <td class="row-actions">{{if not (eq64 .ID $me.ID)}}<form method="post" action="/admin/users/{{.ID}}/delete" data-confirm="Delete user {{.Username}}?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>{{end}}</td></tr>
+    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}{{if .DisplayName}}<div class="muted small">{{.DisplayName}}{{if .Email}} · {{.Email}}{{end}}</div>{{end}}</td>
+    <td>{{template "source" .Source}}{{if and (ne .Source "local") (not .ExternalID)}} <span class="muted small" title="Linked at the first sign-in">pending</span>{{end}}</td>
+    <td>{{if .TOTPEnabled}}<span class="badge up">ON</span>{{else if eq .Source "oidc"}}<span class="muted small">via IdP</span>{{else}}<span class="badge{{if $.Data.Require2FA}} degraded{{end}}">OFF</span>{{end}}</td>
+    <td class="small muted">{{fmtTime .LastLoginAt}}</td>
+    <td class="row-actions">{{if not (eq64 .ID $me.ID)}}
+      {{if .TOTPEnabled}}<form method="post" action="/admin/users/{{.ID}}/reset-2fa" data-confirm="Reset two-factor authentication for {{.Username}}? They will be signed out and can set it up again.">{{template "csrf" $csrf}}<button class="btn small">Reset 2FA</button></form>{{end}}
+      <form method="post" action="/admin/users/{{.ID}}/delete" data-confirm="Delete user {{.Username}}?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
+    {{end}}</td></tr>
     {{end}}
     </tbody>
   </table></div>
+  {{if .Data.Require2FA}}<p class="muted small">Two-factor authentication is mandatory: users with 2FA <em>OFF</em> set it up at their next sign-in.</p>{{end}}
 </section>
 <div>
-<form class="card form" method="post" action="/admin/users">
+<form class="card form" method="post" action="/admin/users" data-user-form>
   <h2>New user</h2>
   {{template "csrf" $csrf}}
+  {{if or .Data.LDAP .Data.OIDC}}
+  <label>Signs in with<select name="source" data-source>
+    <option value="local">Local password</option>
+    {{if .Data.LDAP}}<option value="ldap">LDAP / Active Directory</option>{{end}}
+    {{if .Data.OIDC}}<option value="oidc">Single sign-on (OIDC)</option>{{end}}
+  </select></label>
+  {{end}}
   <label>Username<input name="username" required autocomplete="off"></label>
+  <div data-local-only>
   <label>Password <span class="muted small">(min. 8 characters)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
   <label>Repeat password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
+  </div>
+  <p class="muted small" data-external-only hidden>The user is linked to their directory or SSO identity at the first sign-in. Use the directory login name (LDAP) or the value of the username claim (SSO, e.g. <code>jane@example.com</code>). Pre-registering is only needed when automatic account creation is off.</p>
   <div class="form-actions"><button class="btn primary">Create</button></div>
 </form>
-<form class="card form" method="post" action="/admin/account/password">
-  <h2>Change my password</h2>
-  {{template "csrf" $csrf}}
-  <label>Current password<input name="current" type="password" required autocomplete="current-password"></label>
-  <label>New password<input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
-  <label>Repeat new password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
-  <div class="form-actions"><button class="btn primary">Change</button></div>
-</form>
+<section class="card">
+  <h2>My account</h2>
+  <p class="muted small">Change your password, set up two-factor authentication and manage your sessions.</p>
+  <a class="btn" href="/account">Open my account</a>
+</section>
 </div>
 </div>
 {{template "bottom" .}}
