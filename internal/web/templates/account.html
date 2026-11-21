@@ -1,0 +1,63 @@
+{{template "top" .}}{{$u := .Data.U}}
+<div class="page-head"><h1>My account</h1></div>
+<div class="grid2">
+<div>
+<section class="card">
+  <h2>Profile</h2>
+  <dl class="kv">
+    <dt>Username</dt><dd><strong>{{$u.Username}}</strong> {{template "source" $u.Source}}</dd>
+    {{if $u.DisplayName}}<dt>Name</dt><dd>{{$u.DisplayName}}</dd>{{end}}
+    {{if $u.Email}}<dt>E-mail</dt><dd>{{$u.Email}}</dd>{{end}}
+    <dt>Last sign-in</dt><dd>{{fmtTime $u.LastLoginAt}}</dd>
+    <dt>This session</dt><dd>{{if eq .Data.Method "oidc"}}Single sign-on{{else if eq .Data.Method "ldap"}}Directory password (LDAP){{else}}Local password{{end}}{{if $u.TOTPEnabled}} + authenticator code{{end}}</dd>
+  </dl>
+  <form method="post" action="/account/sessions/revoke" data-confirm="Sign out all your other sessions?">{{template "csrf" .CSRF}}<button class="btn small">Sign out my other sessions</button></form>
+</section>
+{{if $u.IsLocal}}
+<form class="card form" method="post" action="/account/password">
+  <h2>Change my password</h2>
+  {{template "csrf" .CSRF}}
+  <label>Current password<input name="current" type="password" required autocomplete="current-password"></label>
+  <label>New password <span class="muted small">(min. 8 characters)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <label>Repeat new password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
+  <div class="form-actions"><button class="btn primary">Change</button></div>
+</form>
+{{else}}
+<section class="card"><h2>Password</h2><p class="muted small">Your password is managed by {{if eq $u.Source "ldap"}}your directory (LDAP / Active Directory){{else}}your identity provider{{end}}.</p></section>
+{{end}}
+</div>
+<section class="card">
+  <h2>Two-factor authentication {{if $u.TOTPEnabled}}<span class="badge up">ON</span>{{else}}<span class="badge">OFF</span>{{end}}</h2>
+  {{if $u.TOTPEnabled}}
+    <p class="small">Each sign-in asks for a code from your authenticator app. <span class="muted">Recovery codes left: <strong class="fg">{{.Data.RecoveryLeft}}</strong> of 10.</span></p>
+    {{if lt .Data.RecoveryLeft 3}}<div class="flash err">You are running out of recovery codes. Generate new ones below.</div>{{end}}
+    <form class="form" method="post" action="/account/2fa/recovery">
+      {{template "csrf" .CSRF}}
+      <fieldset><legend>New recovery codes</legend>
+      <p class="muted small">Replaces all your existing recovery codes.</p>
+      <label>Current code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required class="otp"></label>
+      <div class="form-actions"><button class="btn">Generate new codes</button></div></fieldset>
+    </form>
+    {{if .Data.Mandatory}}
+    <p class="muted small">Two-factor authentication is mandatory on this server. If you lose your phone and your recovery codes, ask an administrator to reset it.</p>
+    {{else}}
+    <form class="form" method="post" action="/account/2fa/disable" data-confirm="Turn off two-factor authentication?">
+      {{template "csrf" .CSRF}}
+      <fieldset><legend>Turn off</legend>
+      <label>Current code or recovery code<input name="code" autocomplete="one-time-code" maxlength="12" required class="otp"></label>
+      <div class="form-actions"><button class="btn danger">Turn off 2FA</button></div></fieldset>
+    </form>
+    {{end}}
+  {{else}}
+    <p class="small">Protect your account with a code from an authenticator app on your phone, in addition to {{if eq $u.Source "oidc"}}single sign-on{{else}}your password{{end}}.</p>
+    <form class="form" method="post" action="/account/2fa/enable">
+      {{template "csrf" .CSRF}}
+      {{template "totp-setup" .Data.Setup}}
+      <input type="hidden" name="enc" value="{{.Data.Setup.Enc}}">
+      <label>6-digit code<input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required class="otp"></label>
+      <div class="form-actions"><button class="btn primary">Turn on 2FA</button></div>
+    </form>
+  {{end}}
+</section>
+</div>
+{{template "bottom" .}}

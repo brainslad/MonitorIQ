@@ -1,0 +1,68 @@
+{{template "top" .}}{{$m := .Data.M}}{{$c := $m.Config}}
+<div class="page-head"><h1>{{if $m.ID}}Edit monitor{{else}}New monitor{{end}}</h1></div>
+<form class="card form" method="post" data-monitor-form>
+  {{template "csrf" .CSRF}}
+  <div class="grid2">
+    <label>Host
+      <select name="host_id" required>
+        {{range .Data.Hosts}}<option value="{{.ID}}" data-address="{{.Address}}" {{if eq64 .ID $m.HostID}}selected{{end}}>{{.Name}} ({{.Address}})</option>{{end}}
+      </select>
+    </label>
+    <label>Check type
+      <select name="type" data-type-select>
+        {{range types}}<option value="{{.Key}}" data-port="{{.DefaultPort}}" data-hint="{{.TargetHint}}" {{if eq .Key $m.Type}}selected{{end}}>{{.Label}}</option>{{end}}
+      </select>
+    </label>
+  </div>
+  <label>Name<input name="name" required value="{{$m.Name}}" placeholder="Website, Ping, Certificate…"></label>
+  <div class="grid2">
+    <label>Target <span class="muted small">(empty = host address)</span><input name="target" value="{{$m.Target}}" class="mono" data-target-input></label>
+    <label>Port <span class="muted small">(0 = default)</span><input name="port" type="number" min="0" max="65535" value="{{$m.Port}}"></label>
+  </div>
+  <div class="grid3">
+    <label>Interval (seconds)<input name="interval_seconds" type="number" min="10" max="86400" value="{{$m.IntervalSeconds}}"></label>
+    <label>Timeout (seconds)<input name="timeout_seconds" type="number" min="1" max="120" value="{{$m.TimeoutSeconds}}"></label>
+    <label>Failures before alerting<input name="retries" type="number" min="0" max="10" value="{{$m.Retries}}"></label>
+  </div>
+
+  <fieldset data-for="http"><legend>HTTP/HTTPS options</legend>
+    <div class="grid3">
+      <label>Method<select name="method">{{range $x := (split "GET HEAD POST")}}<option {{if eq $x $c.Method}}selected{{end}}>{{$x}}</option>{{end}}</select></label>
+      <label>Accepted status codes<input name="expected_status" value="{{$c.ExpectedStatus}}" placeholder="200-399"></label>
+      <label>Degraded above (ms)<input name="degraded_ms" type="number" min="0" value="{{$c.DegradedMs}}"></label>
+    </div>
+    <label>Keyword in body <span class="muted small">(optional)</span><input name="keyword" value="{{$c.Keyword}}"></label>
+    <label class="check"><input type="checkbox" name="keyword_absent" value="1" {{if $c.KeywordAbsent}}checked{{end}}> Fail if the keyword <em>is</em> present</label>
+    <label class="check"><input type="checkbox" name="ignore_tls_errors" value="1" {{if $c.IgnoreTLSErrors}}checked{{end}}> Ignore certificate errors</label>
+    <label class="check"><input type="checkbox" name="no_follow_redirects" value="1" {{if $c.NoFollowRedirects}}checked{{end}}> Do not follow redirects</label>
+  </fieldset>
+  <fieldset data-for="ping"><legend>Ping options</legend>
+    <label>Packet count<input name="ping_count" type="number" min="1" max="20" value="{{$c.PingCount}}"></label>
+  </fieldset>
+  <fieldset data-for="traceroute"><legend>Traceroute options</legend>
+    <label>Max hops<input name="max_hops" type="number" min="1" max="64" value="{{$c.MaxHops}}"></label>
+    <label class="check"><input type="checkbox" name="trace_icmp" value="1" {{if $c.TraceICMP}}checked{{end}}> Use ICMP instead of UDP</label>
+    <p class="muted small">Tip: use an interval of 300 s or more for traceroute.</p>
+  </fieldset>
+  <fieldset data-for="dns"><legend>DNS options</legend>
+    <div class="grid3">
+      <label>Record type<select name="record_type">{{range $x := (split "A AAAA CNAME MX TXT NS")}}<option {{if eq $x $c.RecordType}}selected{{end}}>{{$x}}</option>{{end}}</select></label>
+      <label>DNS server <span class="muted small">(empty = system)</span><input name="dns_server" value="{{$c.DNSServer}}" placeholder="1.1.1.1" class="mono"></label>
+      <label>Expected value <span class="muted small">(optional)</span><input name="expected" value="{{$c.Expected}}" class="mono"></label>
+    </div>
+  </fieldset>
+  <fieldset data-for="smtp"><legend>SMTP options</legend>
+    <label>Security<select name="smtp_tls">
+      <option value="none" {{if eq $c.SMTPTLS "none"}}selected{{end}}>No TLS (port 25)</option>
+      <option value="starttls" {{if eq $c.SMTPTLS "starttls"}}selected{{end}}>STARTTLS (port 25/587)</option>
+      <option value="implicit" {{if eq $c.SMTPTLS "implicit"}}selected{{end}}>Implicit TLS (port 465)</option>
+    </select></label>
+  </fieldset>
+  <fieldset data-for="tls"><legend>Certificate options</legend>
+    <label>Warn when fewer than (days) remain<input name="warn_days" type="number" min="1" max="365" value="{{$c.WarnDays}}"></label>
+  </fieldset>
+
+  <label class="check"><input type="checkbox" name="enabled" value="1" {{if $m.Enabled}}checked{{end}}> Enabled</label>
+  <div class="form-actions"><a class="btn ghost" href="{{if $m.ID}}/monitors/{{$m.ID}}{{else}}/admin/monitors{{end}}">Cancel</a><button class="btn primary" type="submit">Save</button></div>
+</form>
+{{template "bottom" .}}
