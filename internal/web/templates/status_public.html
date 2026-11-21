@@ -1,0 +1,39 @@
+{{template "head" .}}{{$v := .Data.V}}
+<body class="public">
+<main class="container narrow-page">
+  <div class="public-tools"><button type="button" class="icon-btn" data-theme-toggle title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+    <svg class="i-sun" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="i-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button></div>
+  <header class="public-head">
+    <h1>{{$v.Page.Title}}</h1>
+    {{with $v.Page.Description}}<p class="muted">{{.}}</p>{{end}}
+  </header>
+  {{if not $v.Page.Published}}<div class="flash err">Preview: this page is not published.</div>{{end}}
+  <div class="overall {{statusClass $v.Overall}}">{{template "dot" $v.Overall}} {{$v.Headline}}</div>
+
+  <section class="card">
+  {{range $v.Monitors}}
+    <div class="svc">
+      <div class="svc-head"><strong>{{.Name}}</strong><span class="svc-status {{statusClass .Status}}">{{statusLabel .Status}}</span></div>
+      <div class="bars" aria-label="Availability over the last 90 days">
+        {{range .Days}}<span class="bar {{.Level}}" title="{{fmtDate .Day}}: {{if ge .Total 1}}{{pctVal .Uptime}}{{else}}no data{{end}}"></span>{{end}}
+      </div>
+      <div class="bars-legend muted small"><span class="d90">90 days ago</span><span class="d30">30 days ago</span><span>{{pctVal .Uptime}} uptime</span><span>Today</span></div>
+    </div>
+  {{else}}<p class="muted">No monitors on this page.</p>{{end}}
+  </section>
+
+  <section class="card">
+    <h2>Recent incidents (14 days)</h2>
+    {{if $v.Events}}
+    <ul class="events">
+      {{range $v.Events}}<li>{{template "badge" .To}} <strong>{{.MonitorName}}</strong> <span class="muted small">{{fmtTime .CreatedAt}} · {{if .EndedAt}}resolved after {{between .CreatedAt .EndedAt}}{{else}}ongoing for {{since .CreatedAt}}{{end}}</span></li>{{end}}
+    </ul>
+    {{else}}<p class="muted">No incidents reported.</p>{{end}}
+  </section>
+  <footer class="footer muted small">Updated {{fmtTime $v.Updated}} · <a href="/api/status/{{$v.Page.Slug}}">JSON</a> · Powered by MonitorIQ</footer>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

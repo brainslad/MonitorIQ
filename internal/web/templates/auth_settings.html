@@ -1,0 +1,83 @@
+{{template "top" .}}{{$s := .Data.S}}{{$l := $s.LDAP}}{{$o := $s.OIDC}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "auth"}}
+{{if .Data.TestMsg}}<div class="flash {{if .Data.TestOK}}ok{{else}}err{{end}}" role="status">{{.Data.TestMsg}}</div>{{end}}
+<form class="form auth-form" method="post" action="/admin/auth">
+{{template "csrf" .CSRF}}
+<input type="hidden" name="ldap_bind_password_enc" value="{{.Data.BindEnc}}">
+<input type="hidden" name="oidc_client_secret_enc" value="{{.Data.SecretEnc}}">
+<section class="card">
+  <h2>Two-factor authentication</h2>
+  <p class="muted small">Every user can turn on a second factor (an authenticator app code) under <a href="/account">My account</a>.</p>
+  <label class="check"><input type="checkbox" name="require_2fa" value="1" {{if $s.Require2FA}}checked{{end}}> Require 2FA for all local and LDAP users</label>
+  <p class="muted small">Users without 2FA are asked to set it up at their next sign-in. Single sign-on users rely on the identity provider's MFA (for Entra ID, use Conditional Access).</p>
+</section>
+
+<div class="grid2">
+<section class="card">
+  <h2>LDAP / Active Directory</h2>
+  <label class="check"><input type="checkbox" name="ldap_enabled" value="1" {{if $l.Enabled}}checked{{end}}> Allow sign-in with directory accounts</label>
+  <div class="preset-row small"><span class="muted">Presets:</span>
+    <button type="button" class="btn small" data-ldap-preset="ad">Active Directory</button>
+    <button type="button" class="btn small" data-ldap-preset="openldap">OpenLDAP / FreeIPA</button>
+  </div>
+  <fieldset><legend>Server</legend>
+    <label>URL<input name="ldap_url" value="{{$l.URL}}" placeholder="ldaps://dc01.example.com:636"></label>
+    <label class="check"><input type="checkbox" name="ldap_start_tls" value="1" {{if $l.StartTLS}}checked{{end}}> Use StartTLS (with ldap://)</label>
+    <label class="check"><input type="checkbox" name="ldap_insecure" value="1" {{if $l.InsecureSkipVerify}}checked{{end}}> Skip certificate verification <span class="muted small">(test labs only)</span></label>
+  </fieldset>
+  <fieldset><legend>Service account</legend>
+    <label>Bind DN <span class="muted small">(empty = anonymous)</span><input name="ldap_bind_dn" value="{{$l.BindDN}}" placeholder="CN=svc-monitoriq,OU=Service Accounts,DC=example,DC=com"></label>
+    <label>Password<input name="ldap_bind_password" type="password" autocomplete="new-password" placeholder="{{if .Data.HasBind}}•••••••• (saved, leave empty to keep){{end}}"></label>
+    {{if .Data.HasBind}}<label class="check small"><input type="checkbox" name="ldap_clear_password" value="1"> Remove the saved password</label>{{end}}
+  </fieldset>
+  <fieldset><legend>Users</legend>
+    <label>Base DN<input name="ldap_base_dn" value="{{$l.BaseDN}}" placeholder="DC=example,DC=com"></label>
+    <label>User filter <span class="muted small">({username} is replaced)</span><input name="ldap_user_filter" value="{{$l.UserFilter}}" data-ad="{{.Data.ADFilter}}" data-openldap="{{.Data.OpenLDAPFilter}}"></label>
+    <div class="grid3">
+      <label>Username attribute<input name="ldap_username_attr" value="{{$l.UsernameAttr}}"></label>
+      <label>Name attribute<input name="ldap_name_attr" value="{{$l.NameAttr}}"></label>
+      <label>E-mail attribute<input name="ldap_email_attr" value="{{$l.EmailAttr}}"></label>
+    </div>
+    <label>Required group DN <span class="muted small">(optional)</span><input name="ldap_required_group" value="{{$l.RequiredGroup}}" placeholder="CN=MonitorIQ Admins,OU=Groups,DC=example,DC=com"></label>
+    <label class="check"><input type="checkbox" name="ldap_nested" value="1" {{if $l.NestedGroups}}checked{{end}}> Include nested groups (Active Directory)</label>
+    <label class="check"><input type="checkbox" name="ldap_auto_create" value="1" {{if $l.AutoCreate}}checked{{end}}> Create MonitorIQ users automatically at the first sign-in</label>
+  </fieldset>
+  <fieldset><legend>Test</legend>
+    <p class="muted small">Tests the values in this form without saving them.</p>
+    <label>Look up user <span class="muted small">(optional)</span><input name="ldap_test_username" autocomplete="off" placeholder="jdoe"></label>
+    <div class="form-actions"><button class="btn" formaction="/admin/auth/ldap-test">Test connection</button></div>
+  </fieldset>
+</section>
+
+<section class="card">
+  <h2>Single sign-on (OpenID Connect)</h2>
+  <label class="check"><input type="checkbox" name="oidc_enabled" value="1" {{if $o.Enabled}}checked{{end}}> Show a single sign-on button on the sign-in page</label>
+  <p class="muted small">Works with Microsoft Entra ID (Azure AD), Google Workspace, Okta, Keycloak, Authentik, AD FS and any OpenID Connect provider.</p>
+  <fieldset><legend>Application registration</legend>
+    <label>Redirect URI <span class="muted small">(register this at the provider)</span>
+      <span class="copy-field"><input readonly value="{{.Data.RedirectURL}}" id="redirect-uri"><button type="button" class="btn small" data-copy="#redirect-uri">Copy</button></span></label>
+    <label>Azure tenant ID <span class="muted small">(fills the issuer for Entra ID)</span><input name="oidc_azure_tenant" placeholder="00000000-0000-0000-0000-000000000000" data-azure-tenant autocomplete="off"></label>
+    <label>Issuer URL<input name="oidc_issuer" value="{{$o.Issuer}}" placeholder="https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0"></label>
+    <label>Client ID<input name="oidc_client_id" value="{{$o.ClientID}}" autocomplete="off"></label>
+    <label>Client secret<input name="oidc_client_secret" type="password" autocomplete="new-password" placeholder="{{if .Data.HasSecret}}•••••••• (saved, leave empty to keep){{end}}"></label>
+    {{if .Data.HasSecret}}<label class="check small"><input type="checkbox" name="oidc_clear_secret" value="1"> Remove the saved secret</label>{{end}}
+    <label>Scopes<input name="oidc_scopes" value="{{$o.Scopes}}"></label>
+  </fieldset>
+  <fieldset><legend>Users</legend>
+    <label>Button label<input name="oidc_button_label" value="{{$o.ButtonLabel}}"></label>
+    <label>Username claim<input name="oidc_username_claim" value="{{$o.UsernameClaim}}" placeholder="preferred_username"></label>
+    <label>Allowed e-mail domains <span class="muted small">(comma separated, optional)</span><input name="oidc_allowed_domains" value="{{$o.AllowedDomains}}" placeholder="example.com"></label>
+    <div class="grid3 g2">
+      <label>Groups claim<input name="oidc_groups_claim" value="{{$o.GroupsClaim}}"></label>
+      <label>Required groups <span class="muted small">(any of, optional)</span><input name="oidc_required_groups" value="{{$o.RequiredGroups}}" placeholder="group object ID or name"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="oidc_auto_create" value="1" {{if $o.AutoCreate}}checked{{end}}> Create MonitorIQ users automatically at the first sign-in</label>
+    <label class="check"><input type="checkbox" name="oidc_hide_local" value="1" {{if $o.HideLocalLogin}}checked{{end}}> Show only the SSO button on the sign-in page</label>
+    <p class="muted small">The username/password form stays available at <code>/login?local=1</code>, so a local administrator can always get in.</p>
+  </fieldset>
+</section>
+</div>
+<div class="form-actions sticky-actions"><button class="btn primary">Save authentication settings</button></div>
+</form>
+{{template "bottom" .}}
