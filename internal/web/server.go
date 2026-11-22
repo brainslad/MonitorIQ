@@ -26,6 +26,7 @@ import (
 
 	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/config"
+	"github.com/brainslad/monitoriq/internal/geo"
 	"github.com/brainslad/monitoriq/internal/notify"
 	"github.com/brainslad/monitoriq/internal/store"
 )
@@ -56,6 +57,10 @@ type Server struct {
 	OIDC  *auth.OIDC
 	// Notifier sends e-mail (set by main; tests may leave it nil).
 	Notifier *notify.Notifier
+	// Geo finds where monitored targets and this server are (set by main).
+	Geo *geo.Service
+
+	geoUpd *geoUpdate
 
 	pages   map[string]*template.Template
 	limiter *loginLimiter
@@ -63,7 +68,7 @@ type Server struct {
 
 func New(st *store.Store, cfg *config.Config, box *auth.Box, log *slog.Logger) (*Server, error) {
 	s := &Server{Store: st, Cfg: cfg, Log: log, Box: box, OIDC: &auth.OIDC{},
-		pages: map[string]*template.Template{}, limiter: newLoginLimiter()}
+		pages: map[string]*template.Template{}, limiter: newLoginLimiter(), geoUpd: &geoUpdate{}}
 	if err := s.loadTemplates(); err != nil {
 		return nil, err
 	}
@@ -171,6 +176,10 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/email", s.handleEmailSettingsSave)
 	auth("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
+	auth("GET /admin/geo", s.handleGeoSettings)
+	auth("POST /admin/geo", s.handleGeoSettingsSave)
+	auth("POST /admin/geo/update", s.handleGeoUpdate)
+	auth("POST /admin/geo/lookup", s.handleGeoLookup)
 
 	return s.securityHeaders(s.logRequests(mux))
 }

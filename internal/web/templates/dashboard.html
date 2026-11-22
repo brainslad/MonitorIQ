@@ -147,6 +147,45 @@
   </div>
 </section>
 
+{{with $d.Geo}}{{$g := .}}
+<section class="card geo-dash" id="network-map">
+  <div class="card-head">
+    <div><h2>Network map</h2><p class="muted small">Where your monitors point, seen from {{$g.Probe.Label}}</p></div>
+    <a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "arrow"}}</a>
+  </div>
+  {{if not $g.DB.Ready}}<div class="note small">Add a geolocation database to place targets on the map: <a href="/admin/geo">Settings → Geolocation</a> downloads the free DB-IP Lite edition.</div>{{end}}
+  <div class="geo-wrap dash">
+    <div class="geo-mapbox">{{template "geomap" $g.Map}}{{template "geo-legend" false}}
+      {{with $g.Targets}}<ul class="geo-targets">
+        {{range .}}<li><span class="dot {{.Status}}"></span><span class="t"><a href="/monitors/{{.ID}}">{{.Name}}</a><span class="muted small">{{with .Flag}}<span class="flag">{{.}}</span> {{end}}{{.Place}} · <span class="mono">{{.IP}}</span></span></span><span class="small muted nowrap">{{if ge .Km 0.0}}{{km .Km}}{{end}}</span></li>{{end}}
+      </ul>{{end}}
+    </div>
+    <div class="geo-side">
+      <div class="geo-end">
+        <h3><i class="lg probe"></i>{{$g.Probe.Label}}</h3>
+        <dl class="kv tight">
+          {{with $g.Probe.Public}}<dt>Public IP</dt><dd class="mono">{{.IP}}</dd>
+          {{with .Loc.Place}}<dt>Location</dt><dd>{{with $g.Probe.Public.Loc.Flag}}<span class="flag">{{.}}</span> {{end}}{{.}}</dd>{{end}}
+          {{with .ASNLabel}}<dt>Network</dt><dd>{{.}}</dd>{{end}}{{end}}
+          {{if eq $g.Probe.LocFrom "fixed"}}<dt>Placed at</dt><dd>{{with $g.Probe.Loc.Place}}{{.}}{{else}}{{$g.Probe.Loc.Coords}}{{end}}</dd>{{end}}
+          {{with $g.Probe.LocalIPs}}<dt>Local</dt><dd class="mono">{{index . 0}}</dd>{{end}}
+        </dl>
+      </div>
+      <div class="geo-stats">
+        <div><strong>{{$g.Located}}</strong><span>on the map</span></div>
+        <div><strong>{{$g.Local}}</strong><span>private network</span></div>
+        <div><strong>{{$g.Unknown}}</strong><span>no location</span></div>
+      </div>
+      {{if $g.Countries}}<ul class="geo-countries">
+        {{range $g.Countries}}<li><span>{{with .Flag}}<span class="flag">{{.}}</span>{{end}}{{.Name}}</span><span class="dot-{{.Status}}"></span><strong>{{.Count}}</strong></li>{{end}}
+      </ul>{{end}}
+      {{if $g.Farthest}}<p class="muted small m0">Farthest: <strong>{{$g.Farthest}}</strong> · {{km $g.FarKm}}</p>{{end}}
+    </div>
+  </div>
+  {{if $g.AttrText}}<p class="geo-attr muted small"><a href="{{$g.AttrURL}}" rel="noopener" target="_blank">{{$g.AttrText}}</a></p>{{end}}
+</section>
+{{end}}
+
 <section class="card" id="all-monitors">
   <div class="card-head"><div><h2>All monitors</h2><p class="muted small">Problems first · hour-by-hour availability for the last 24 hours</p></div></div>
   <div class="toolbar" data-filters>

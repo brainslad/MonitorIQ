@@ -25,6 +25,7 @@ import (
 	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/checks"
 	"github.com/brainslad/monitoriq/internal/config"
+	"github.com/brainslad/monitoriq/internal/geo"
 	"github.com/brainslad/monitoriq/internal/notify"
 	"github.com/brainslad/monitoriq/internal/scheduler"
 	"github.com/brainslad/monitoriq/internal/store"
@@ -50,6 +51,8 @@ Usage:
   monitoriq check <type> <target> [port]  run a one-off check (diagnostics)
   monitoriq email test <address>          send a test e-mail with the saved settings
   monitoriq email digest                  send the certificate digest now
+  monitoriq geoip update                  download the free DB-IP Lite geolocation databases
+  monitoriq geoip lookup <ip|host>        show what the databases know about an address
   monitoriq version                       print the version
 
 Global options:
@@ -93,6 +96,8 @@ func main() {
 		checkCmd(args[1:])
 	case "email":
 		emailCmd(args[1:])
+	case "geoip":
+		geoipCmd(args[1:])
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	case "help", "-h", "--help":
@@ -161,6 +166,13 @@ func serve() {
 		fatal("%v", err)
 	}
 	srv.Notifier = mailer
+	geoDB, err := geo.Open(cfg.GeoIPDir)
+	if err != nil {
+		log.Warn("geolocation database", "err", err)
+	}
+	defer geoDB.Close()
+	srv.Geo = geo.NewService(geoDB, srv.GeoSettings)
+	go srv.RunGeoAutoUpdate(ctx)
 	httpSrv := &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           srv.Handler(),
@@ -369,4 +381,68 @@ func emailCmd(args []string) {
 		fatal("%v", err)
 	}
 	fmt.Println("Test message sent to " + args[1] + ".")
+}
+
+func geoipCmd(args []string) {
+	if len(args) == 0 || (args[0] == "lookup" && len(args) != 2) || (args[0] != "update" && args[0] != "lookup") {
+		fatal("usage: monitoriq geoip update | monitoriq geoip lookup <ip|host>")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		fatal("%v", err)
+	}
+	db, err := geo.Open(cfg.GeoIPDir)
+	if err != nil {
+		fatal("%v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	if args[0] == "update" {
+		mirror := ""
+		if dbURL := cfg.DatabaseURL; dbURL != "" {
+			st := openStore()
+			if raw, err := st.GetSetting(ctx, geo.SettingsKey); err == nil {
+				if gs, err := geo.ParseSettings(raw); err == nil {
+					mirror = gs.Mirror
+				}
+			}
+			st.Close()
+		}
+		fmt.Println("Downloading into " + cfg.GeoIPDir + " …")
+		res, err := db.Update(ctx, nil, mirror, time.Now().UTC())
+		for _, r := range res {
+			state := "downloaded"
+			if r.Skipped {
+				state = "already current"
+			}
+			fmt.Printf("  %-9s %s, %s edition (%s)\n", r.File, state, r.Built.Format("January 2006"), r.URL)
+		}
+		if err != nil {
+			fatal("%v", err)
+		}
+		fmt.Println("Done. A running server loads the new files within an hour (or restart it).")
+		return
+	}
+	svc := geo.NewService(db, func(context.Context) geo.Settings { return geo.DefaultSettings() })
+	h := svc.Host(ctx, args[1])
+	if h.Error != "" {
+		fmt.Println(h.Host + ": " + h.Error)
+	}
+	for _, i := range h.IPs {
+		fmt.Printf("%s (IPv%d, %s)\n", i.IP, i.Version, i.Scope)
+		row := func(k, v string) {
+			if v != "" {
+				fmt.Printf("  %-12s %s\n", k, v)
+			}
+		}
+		row("reverse DNS", i.PTR)
+		row("location", i.Loc.Place())
+		row("coordinates", i.Loc.Coords())
+		row("network", i.ASNLabel())
+		row("prefix", i.Network)
+		row("time zone", i.Loc.TimeZone)
+	}
+	if !db.Status().Ready() {
+		fmt.Println("(no geolocation database in " + cfg.GeoIPDir + ": run 'monitoriq geoip update')")
+	}
 }

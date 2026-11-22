@@ -11,16 +11,19 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 type Config struct {
-	DatabaseURL    string
-	Listen         string
-	BaseURL        string
-	SecretKey      string
-	DataDir        string
+	DatabaseURL string
+	Listen      string
+	BaseURL     string
+	SecretKey   string
+	DataDir     string
+	// GeoIPDir holds the geolocation databases (city.mmdb, asn.mmdb).
+	GeoIPDir       string
 	CookieSecure   bool
 	MaxConcurrency int
 	TrustProxy     bool
@@ -90,6 +93,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid MONITORIQ_MAX_CONCURRENCY")
 	}
 	c.MaxConcurrency = n
+	c.GeoIPDir = env("MONITORIQ_GEOIP_DIR", filepath.Join(c.DataDir, "geoip"))
 	if c.DatabaseURL == "" {
 		return nil, fmt.Errorf("MONITORIQ_DATABASE_URL is not set")
 	}
