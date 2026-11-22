@@ -62,6 +62,12 @@
     <label>Warn when fewer than (days) remain<input name="warn_days" type="number" min="1" max="365" value="{{$c.WarnDays}}"></label>
   </fieldset>
 
+  <fieldset><legend>Email alerts</legend>
+    {{with .Data.Email}}<p class="muted small">{{if .Enabled}}Alerts go to {{if .Recipients}}<strong>{{.Recipients}}</strong>{{else}}nobody by default{{end}}{{if .Subscribers}} and {{.Subscribers}} {{if eq .Subscribers 1}}user who asked{{else}}users who asked{{end}} for them{{end}}, plus the addresses below. <a href="/admin/email">Email settings</a>{{else}}Sending e-mail is turned off. Set it up under <a href="/admin/email">Settings → Email</a>.{{end}}</p>{{end}}
+    <label>Extra recipients for this monitor <span class="muted small">(comma separated, optional)</span><input name="alert_emails" value="{{$m.AlertEmails}}" placeholder="web-team@example.com, oncall@example.com" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="alerts_muted" value="1" {{if $m.AlertsMuted}}checked{{end}}> Mute e-mail alerts for this monitor</label>
+  </fieldset>
+
   <label class="check"><input type="checkbox" name="enabled" value="1" {{if $m.Enabled}}checked{{end}}> Enabled</label>
   <div class="form-actions"><a class="btn ghost" href="{{if $m.ID}}/monitors/{{$m.ID}}{{else}}/admin/monitors{{end}}">Cancel</a><button class="btn primary" type="submit">Save</button></div>
 </form>

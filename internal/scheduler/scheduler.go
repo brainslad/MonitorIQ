@@ -21,6 +21,8 @@ type Scheduler struct {
 	Store       *store.Store
 	Concurrency int
 	Log         *slog.Logger
+	// OnTransition, if set, is called for every status change (e-mail alerts).
+	OnTransition func(store.Transition)
 
 	mu       sync.Mutex
 	inflight map[int64]bool
@@ -103,6 +105,9 @@ func (s *Scheduler) runOne(ctx context.Context, m *store.Monitor) {
 	if tr != nil {
 		s.Log.Info("status change", "monitor", m.Name, "id", m.ID,
 			"from", tr.From.String(), "to", tr.To.String(), "message", tr.Message)
+		if s.OnTransition != nil {
+			s.OnTransition(*tr)
+		}
 	}
 }
 

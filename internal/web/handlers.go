@@ -586,7 +586,13 @@ func (s *Server) monitorFormData(r *http.Request, m *store.Monitor) (map[string]
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"M": m, "Hosts": hosts}, nil
+	data := map[string]any{"M": m, "Hosts": hosts}
+	if s.Notifier != nil {
+		st := s.emailSettings(r.Context())
+		subs, _ := s.Store.AlertSubscribers(r.Context())
+		data["Email"] = map[string]any{"Enabled": st.Enabled, "Recipients": st.Recipients, "Subscribers": len(subs)}
+	}
+	return data, nil
 }
 
 func (s *Server) handleMonitorForm(w http.ResponseWriter, r *http.Request) {
@@ -628,6 +634,8 @@ func monitorFromForm(r *http.Request, id int64) *store.Monitor {
 		TimeoutSeconds:  formInt(r, "timeout_seconds", 10),
 		Retries:         formInt(r, "retries", 1),
 		Enabled:         formBool(r, "enabled"),
+		AlertEmails:     r.PostFormValue("alert_emails"),
+		AlertsMuted:     formBool(r, "alerts_muted"),
 	}
 	c := checks.Config{}
 	switch m.Type {

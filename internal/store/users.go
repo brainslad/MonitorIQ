@@ -46,6 +46,7 @@ type User struct {
 	DisplayName string
 	Email       string
 	TOTPEnabled bool
+	EmailAlerts bool
 }
 
 // IsLocal reports whether the user signs in with a password stored here.
@@ -59,12 +60,12 @@ func (u *User) Label() string {
 	return u.Username
 }
 
-const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled`
+const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled, u.email_alerts`
 
 func scanUser(r pgx.Row, extra ...any) (*User, error) {
 	var u User
 	dest := append([]any{&u.ID, &u.Username, &u.CreatedAt, &u.LastLoginAt, &u.Source, &u.ExternalID,
-		&u.DisplayName, &u.Email, &u.TOTPEnabled}, extra...)
+		&u.DisplayName, &u.Email, &u.TOTPEnabled, &u.EmailAlerts}, extra...)
 	if err := r.Scan(dest...); err != nil {
 		return nil, notFound(err)
 	}
