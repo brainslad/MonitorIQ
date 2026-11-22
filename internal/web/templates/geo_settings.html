@@ -1,0 +1,83 @@
+{{template "top" .}}{{$s := .Data.S}}{{$db := .Data.DB}}{{$p := .Data.Probe}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "geo"}}
+{{if .Data.UpdateMsg}}<div class="flash {{if .Data.UpdateOK}}ok{{else}}err{{end}}" role="status">{{.Data.UpdateMsg}}</div>{{end}}
+
+<div class="grid2">
+<section class="card">
+  <h2>Geolocation database</h2>
+  <p class="muted small">Addresses are placed on the map with a local database, so lookups never leave this server. MonitorIQ downloads the free <a href="https://db-ip.com/db/lite.php" rel="noopener" target="_blank">DB-IP Lite</a> edition (city and network operator, updated monthly, CC BY 4.0). MaxMind GeoLite2 files work too: copy <code>GeoLite2-City.mmdb</code> and <code>GeoLite2-ASN.mmdb</code> to the folder below as <code>city.mmdb</code> and <code>asn.mmdb</code>, then restart.</p>
+  <dl class="kv">
+    <dt>Folder</dt><dd class="mono">{{$db.Dir}}</dd>
+    <dt>City</dt><dd>{{if $db.City.Loaded}}{{$db.City.Type}} · {{$db.City.Built.Format "January 2006"}} edition · {{mb $db.City.Size}}{{else}}<span class="c-down">not installed</span>{{end}}</dd>
+    <dt>Network (ASN)</dt><dd>{{if $db.ASN.Loaded}}{{$db.ASN.Type}} · {{$db.ASN.Built.Format "January 2006"}} edition · {{mb $db.ASN.Size}}{{else}}<span class="muted">not installed</span>{{end}}</dd>
+    {{if .Data.AttrText}}<dt>Credit</dt><dd><a href="{{.Data.AttrURL}}" rel="noopener" target="_blank">{{.Data.AttrText}}</a> <span class="muted small">(shown under every map)</span></dd>{{end}}
+  </dl>
+  <form method="post" action="/admin/geo/update">{{template "csrf" .CSRF}}
+    <button class="btn primary" {{if .Data.Updating}}disabled{{end}}>{{if .Data.Updating}}Downloading…{{else if $db.City.Loaded}}Download DB-IP Lite now{{else}}Download DB-IP Lite{{end}}</button>
+  </form>
+  <p class="muted small">About 130 MB from db-ip.com. The command <code>monitoriq geoip update</code> does the same, for example from a monthly cron job.</p>
+</section>
+
+<section class="card">
+  <h2>This monitoring system</h2>
+  <dl class="kv">
+    <dt>Host name</dt><dd>{{$p.Hostname}}</dd>
+    <dt>Local addresses</dt><dd class="mono">{{with $p.LocalIPs}}{{join .}}{{else}}—{{end}}</dd>
+    <dt>Public address</dt><dd>{{with $p.Public}}<span class="mono">{{.IP}}</span> <span class="muted small">({{$p.PublicFrom}})</span>{{else}}<span class="muted">{{with $p.PublicError}}{{.}}{{else}}not shown{{end}}</span>{{end}}</dd>
+    {{with $p.Public}}{{with .PTR}}<dt>Reverse DNS</dt><dd class="mono">{{.}}</dd>{{end}}{{with .ASNLabel}}<dt>Network</dt><dd>{{.}}</dd>{{end}}{{end}}
+    <dt>On the map at</dt><dd>{{if $p.Located}}{{with $p.Loc.Flag}}<span class="flag">{{.}}</span> {{end}}{{with $p.Loc.Place}}{{.}} · {{end}}{{$p.Loc.Coords}} <span class="muted small">({{if eq $p.LocFrom "fixed"}}set by hand{{else}}from the database{{end}})</span>{{else}}<span class="muted">unknown: add the database or set the location below</span>{{end}}</dd>
+  </dl>
+</section>
+</div>
+
+<form class="form card" method="post" action="/admin/geo">
+{{template "csrf" .CSRF}}
+<h2>Settings</h2>
+<div class="grid2">
+  <div>
+    <fieldset><legend>Public IP address of this server</legend>
+      <label class="check"><input type="radio" name="public_ip_mode" value="auto" {{if eq $s.PublicIPMode "auto"}}checked{{end}}> <span>Detect it automatically <span class="muted small">(asks the address below every 6 hours)</span></span></label>
+      <label>Detection address<input name="detect_url" value="{{$s.DetectURL}}" placeholder="{{.Data.DefaultURL}}"></label>
+      <label class="check"><input type="radio" name="public_ip_mode" value="manual" {{if eq $s.PublicIPMode "manual"}}checked{{end}}> Use this address</label>
+      <label>Public IP<input name="public_ip" value="{{$s.PublicIP}}" placeholder="203.0.113.10" class="mono"></label>
+      <label class="check"><input type="radio" name="public_ip_mode" value="off" {{if eq $s.PublicIPMode "off"}}checked{{end}}> Do not show a public address</label>
+    </fieldset>
+    <fieldset><legend>Name on the map</legend>
+      <label>Label <span class="muted small">(empty = host name)</span><input name="label" value="{{$s.Label}}" placeholder="{{$p.Hostname}}"></label>
+    </fieldset>
+  </div>
+  <div>
+    <fieldset><legend>Location of this server</legend>
+      <label class="check"><input type="checkbox" name="fixed_location" value="1" {{if $s.FixedLocation}}checked{{end}}> <span>Set the location by hand <span class="muted small">(behind NAT, a VPN or a proxy the public address may point elsewhere)</span></span></label>
+      <div class="grid3 g2">
+        <label>Latitude<input name="lat" inputmode="decimal" value="{{if $s.FixedLocation}}{{$s.Lat}}{{end}}" placeholder="38.7223"></label>
+        <label>Longitude<input name="lon" inputmode="decimal" value="{{if $s.FixedLocation}}{{$s.Lon}}{{end}}" placeholder="-9.1393"></label>
+        <label>City<input name="city" value="{{$s.City}}" placeholder="Lisbon"></label>
+        <label>Country<input name="country" value="{{$s.Country}}" placeholder="Portugal"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Lookups</legend>
+      <label class="check"><input type="checkbox" name="reverse_dns" value="1" {{if $s.ReverseDNS}}checked{{end}}> Show reverse DNS (PTR) names</label>
+      <label class="check"><input type="checkbox" name="auto_update" value="1" {{if $s.AutoUpdate}}checked{{end}}> Download the new database edition every month</label>
+      <label>Download mirror <span class="muted small">(optional)</span><input name="mirror" value="{{$s.Mirror}}" placeholder="{{.Data.DefaultMirror}}"></label>
+    </fieldset>
+  </div>
+</div>
+<div class="actions"><button class="btn primary">Save</button></div>
+</form>
+
+<section class="card" id="lookup">
+  <h2>Look up an address</h2>
+  <form class="form inline-form" method="post" action="/admin/geo/lookup">{{template "csrf" .CSRF}}
+    <input name="q" value="{{.Data.LookupQ}}" placeholder="IP address, host name or URL" class="mono" required>
+    <button class="btn">Look up</button>
+  </form>
+  {{with .Data.Lookup}}
+  <div class="geo-lookup">
+    {{if .Error}}<p class="muted small">{{.Host}}: {{.Error}}</p>{{end}}
+    {{range .IPs}}{{template "geo-ip" .}}{{end}}
+  </div>
+  {{end}}
+</section>
+{{template "bottom" .}}

@@ -300,3 +300,12 @@ func cleanErr(err error) string {
 	}
 	return err.Error()
 }
+
+// TargetHost is the host name or address a monitor talks to: the DNS server
+// for DNS checks that name one, otherwise the host part of the target.
+func TargetHost(m Monitor) string {
+	if m.Type == TypeDNS && strings.TrimSpace(m.Config.DNSServer) != "" {
+		return bareHost(m.Config.DNSServer)
+	}
+	return bareHost(m.Target)
+}

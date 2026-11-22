@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -83,7 +84,16 @@ func funcMap() template.FuncMap {
 			b, _ := json.Marshal(v)
 			return template.JS(b)
 		},
-		"add":   func(a, b int) int { return a + b },
+		"add":  func(a, b int) int { return a + b },
+		"add2": func(a, b float64) float64 { return a + b },
+		"mul":  func(a, b float64) float64 { return a * b },
+		"km": func(v float64) string {
+			if v < 10 {
+				return fmt.Sprintf("%.1f km", v)
+			}
+			return groupThousands(int64(v+0.5)) + " km"
+		},
+		"mb":    func(n int64) string { return fmt.Sprintf("%.0f MB", float64(n)/(1<<20)) },
 		"split": strings.Fields,
 		"upper": strings.ToUpper,
 		"pctf": func(v float64) string {
@@ -306,4 +316,13 @@ func sparkline(values []float64) template.HTML {
 		fmt.Fprintf(&b, "%.1f,%.1f", x, y)
 	}
 	return template.HTML(fmt.Sprintf(`<svg class="spark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="%s"/></svg>`, b.String()))
+}
+
+// groupThousands writes 12345 as "12,345".
+func groupThousands(n int64) string {
+	s := strconv.FormatInt(n, 10)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }

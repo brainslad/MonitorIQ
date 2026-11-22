@@ -361,7 +361,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"Monitors": list, "Up24": up24, "Up30": up30, "Bars": bars, "K": k,
 		"Incidents": incidents, "Types": typeList, "Now": now,
 		"Hosts": hosts, "Heat": heat, "HeatPct": heatPct, "Certs": certData,
-		"HeatHours": hourTicks(now), "IncRows": incs,
+		"HeatHours": hourTicks(now), "IncRows": incs, "Geo": s.dashboardGeo(ctx, list),
 	}}
 	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
 }
@@ -482,6 +482,7 @@ func (s *Server) handleMonitorDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	p := &page{Title: m.Name, Active: "monitors", Data: map[string]any{
 		"M": m, "Uptimes": uptimes, "Results": results, "Events": events, "Latest": latest,
+		"Geo": s.monitorGeo(ctx, m, latest),
 	}}
 	s.renderStatus(w, r, http.StatusOK, "monitor", p)
 }
