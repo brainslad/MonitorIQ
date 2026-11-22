@@ -186,9 +186,8 @@ Installer options:
 | `--open-firewall` | Opens the port in firewalld |
 | `--db-url postgres://…` | Use an existing PostgreSQL instead of installing a local one |
 | `--pg-version 15` | PostgreSQL version to install (default 16) |
-| `--build` | Build from source even if a binary is present |
 
-**Upgrade:** download the new version and run `sudo ./install.sh` again. Configuration and data are kept and migrations are applied automatically.
+**Upgrade:** download the new version and run `sudo ./install.sh` again (from a git clone: `git pull` and then `sudo ./install.sh`, which always rebuilds from source). Configuration and data are kept, migrations are applied automatically, and the installer shows the old and the new version.
 
 **Uninstall:** `sudo ./uninstall.sh` (keeps data) or `sudo ./uninstall.sh --purge` (deletes the database and configuration).
 
