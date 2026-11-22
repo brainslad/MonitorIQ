@@ -112,6 +112,66 @@ func funcMap() template.FuncMap {
 		"clock":     func(t time.Time) string { return t.Local().Format("15:04:05") },
 		"hourLabel": func(t time.Time) string { return t.Local().Format("15:04") },
 		"eq64":      func(a, b int64) bool { return a == b },
+		"initials": func(name string) string {
+			var out []rune
+			for _, f := range strings.FieldsFunc(name, func(r rune) bool { return r == ' ' || r == '.' || r == '_' || r == '-' || r == '@' }) {
+				if len(out) == 2 {
+					break
+				}
+				out = append(out, []rune(strings.ToUpper(f))[0])
+			}
+			if len(out) == 0 {
+				return "?"
+			}
+			return string(out)
+		},
+		"thousands": func(n int) string {
+			s := fmt.Sprint(n)
+			for i := len(s) - 3; i > 0; i -= 3 {
+				s = s[:i] + "," + s[i:]
+			}
+			return s
+		},
+		"shortWhen": func(t time.Time) string {
+			l := t.Local()
+			if y, m, d := l.Date(); y == time.Now().Year() && m == time.Now().Month() && d == time.Now().Day() {
+				return l.Format("15:04")
+			}
+			return l.Format("2 Jan")
+		},
+		"longDate": func(t time.Time) string { return t.Local().Format("Monday 2 January") },
+		"greeting": func(t time.Time) string {
+			switch h := t.Local().Hour(); {
+			case h < 5:
+				return "Good evening"
+			case h < 12:
+				return "Good morning"
+			case h < 18:
+				return "Good afternoon"
+			}
+			return "Good evening"
+		},
+		"firstName": func(name string) string {
+			name = strings.TrimSpace(name)
+			if i := strings.IndexAny(name, " @"); i > 0 {
+				name = name[:i]
+			}
+			if name == "" {
+				return "there"
+			}
+			return strings.ToUpper(name[:1]) + name[1:]
+		},
+		"clamp": func(v float64) float64 { return math.Max(0, math.Min(100, v)) },
+		"neg":   func(n int) int { return -n },
+		"section": func(active string) string {
+			switch active {
+			case "users", "settings":
+				return "Administration"
+			case "account":
+				return "Account"
+			}
+			return "Monitoring"
+		},
 		"contains": func(list []int64, id int64) bool {
 			for _, x := range list {
 				if x == id {

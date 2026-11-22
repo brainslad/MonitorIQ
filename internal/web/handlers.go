@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -61,6 +62,40 @@ type dashKPI struct {
 	SlowestMs                                  float64
 	OpenIncidents, Incidents24h                int
 	BarUp, BarDegraded, BarDown, BarPaused     float64 // stacked bar widths in %
+	Active, Online                             int
+	LongestOpen                                string // duration of the oldest ongoing incident
+	Checks24h                                  int
+	Meter30                                    float64 // 30-day uptime on a 95–100 % scale
+}
+
+// incRow is one line of the dashboard incident list.
+type incRow struct {
+	store.Event
+	Open bool
+	Dur  string
+	Pct  float64 // duration relative to the longest listed
+}
+
+// hostRow summarises one host in the fleet health card.
+type hostRow struct {
+	ID       int64
+	Name     string
+	Monitors int
+	Uptime   float64 // -1 without data
+	Down     int
+}
+
+// heatRow is one line of the availability map.
+type heatRow struct {
+	ID    int64
+	Name  string
+	Cells []store.DayStat
+}
+
+// certStep is one marker of the certificate renewal stepper.
+type certStep struct {
+	Label string
+	State string // done, current, todo
 }
 
 func avg(m map[int64]float64, ids []int64) float64 {
@@ -175,23 +210,227 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			typeList = append(typeList, t.Key)
 		}
 	}
-	p := &page{Title: "Dashboard", Active: "dashboard", Data: map[string]any{
-		"Monitors": list, "Up24": up24, "Up30": up30, "Bars": bars, "K": k,
-		"Incidents": incidents, "Types": typeList, "Now": now,
-	}}
-	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
-}
+	k.Active = len(active)
+	k.Online = k.Up + k.Degraded
+	for _, e := range incidents {
+		if e.EndedAt == nil {
+			k.LongestOpen = humanDuration(now.Sub(e.CreatedAt)) // incidents are newest first
+		}
+	}
 
-func (s *Server) handleDashboardSeries(w http.ResponseWriter, r *http.Request) {
-	pts, err := s.Store.ResponseSeries(r.Context(), time.Now().Add(-24*time.Hour), 600)
+	// Fleet health: hosts with their monitors' average 24h uptime.
+	var hosts []hostRow
+	hostIdx := map[int64]int{}
+	hostUp := map[int64][]int64{}
+	for _, m := range list {
+		i, ok := hostIdx[m.HostID]
+		if !ok {
+			i = len(hosts)
+			hostIdx[m.HostID] = i
+			hosts = append(hosts, hostRow{ID: m.HostID, Name: m.HostName})
+		}
+		hosts[i].Monitors++
+		if m.Enabled {
+			hostUp[m.HostID] = append(hostUp[m.HostID], m.ID)
+			if m.Status == checks.Down {
+				hosts[i].Down++
+			}
+		}
+	}
+	for i := range hosts {
+		hosts[i].Uptime = avg(up24, hostUp[hosts[i].ID])
+	}
+	sort.SliceStable(hosts, func(i, j int) bool { return hosts[i].Down > hosts[j].Down })
+	if len(hosts) > 4 {
+		hosts = hosts[:4]
+	}
+
+	// Availability map: the enabled monitors (problems first), hour by hour.
+	var heat []heatRow
+	cells, fullHours := 0, 0
+	for _, m := range list {
+		if !m.Enabled || len(heat) == 10 {
+			continue
+		}
+		row := heatRow{ID: m.ID, Name: m.Name, Cells: bars[m.ID]}
+		for _, c := range row.Cells {
+			if c.Total > 0 {
+				cells++
+				if c.Level() == "up" {
+					fullHours++
+				}
+			}
+		}
+		heat = append(heat, row)
+	}
+	heatPct := -1.0
+	if cells > 0 {
+		heatPct = float64(fullHours) * 100 / float64(cells)
+	}
+
+	// Certificate renewal: the certificate that expires first.
+	certs, err := s.Store.Certificates(ctx)
 	if err != nil {
 		s.serverError(w, err)
 		return
 	}
-	if pts == nil {
-		pts = []store.Point{}
+	certData := map[string]any{}
+	if len(certs) > 0 {
+		c := certs[0]
+		left := c.DaysLeft()
+		marks := []struct {
+			label string
+			days  int
+		}{{"30 d", 30}, {"14 d", 14}, {"7 d", 7}, {"1 d", 1}, {"Expired", 0}}
+		steps := make([]certStep, len(marks))
+		current := -1
+		for i, mk := range marks {
+			steps[i].Label = mk.label
+			if left < mk.days || (mk.days == 0 && left < 0) {
+				steps[i].State = "done"
+				current = i
+			} else {
+				steps[i].State = "todo"
+			}
+		}
+		if current >= 0 {
+			steps[current].State = "current"
+		}
+		lifetime, elapsed := 0, 0
+		if c.NotBefore != nil {
+			lifetime = int(c.NotAfter.Sub(*c.NotBefore).Hours()/24 + 0.5)
+			elapsed = int(now.Sub(*c.NotBefore).Hours() / 24)
+		}
+		progress := 0.0
+		if lifetime > 0 {
+			progress = math.Min(100, float64(elapsed)*100/float64(lifetime))
+		}
+		stage := "Valid"
+		switch {
+		case left < 0:
+			stage = "Expired"
+		case left < 7:
+			stage = "Renew now"
+		case left < 14:
+			stage = "Renewal overdue"
+		case left < 30:
+			stage = "Renewal window"
+		}
+		certData = map[string]any{"Cert": c, "Left": left, "Steps": steps, "Lifetime": lifetime, "Elapsed": elapsed,
+			"Progress": progress, "Stage": stage, "Others": certs[1:min(len(certs), 5)]}
 	}
-	writeJSON(w, map[string]any{"points": pts})
+
+	checks24, err := s.Store.ChecksSince(ctx, now.Add(-24*time.Hour))
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	k.Checks24h = checks24
+	if k.Uptime30 >= 0 {
+		k.Meter30 = math.Max(0, math.Min(100, (k.Uptime30-95)*20))
+	}
+
+	var incs []incRow
+	longest := time.Duration(0)
+	for i, e := range incidents {
+		if i == 7 {
+			break
+		}
+		end := now
+		if e.EndedAt != nil {
+			end = *e.EndedAt
+		}
+		d := end.Sub(e.CreatedAt)
+		if d > longest {
+			longest = d
+		}
+		incs = append(incs, incRow{Event: e, Open: e.EndedAt == nil, Dur: humanDuration(d), Pct: float64(d)})
+	}
+	for i := range incs {
+		if longest > 0 {
+			incs[i].Pct = math.Max(4, incs[i].Pct*100/float64(longest))
+		}
+	}
+
+	p := &page{Title: "Dashboard", Active: "dashboard", Data: map[string]any{
+		"Monitors": list, "Up24": up24, "Up30": up30, "Bars": bars, "K": k,
+		"Incidents": incidents, "Types": typeList, "Now": now,
+		"Hosts": hosts, "Heat": heat, "HeatPct": heatPct, "Certs": certData,
+		"HeatHours": hourTicks(now), "IncRows": incs,
+	}}
+	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
+}
+
+// hourTicks labels the availability map columns (every 6 hours).
+func hourTicks(now time.Time) []string {
+	start := now.Truncate(time.Hour).Add(-23 * time.Hour)
+	out := make([]string, 0, 4)
+	for i := 0; i < 24; i += 6 {
+		out = append(out, start.Add(time.Duration(i)*time.Hour).Local().Format("15:04"))
+	}
+	return out
+}
+
+// handleDashboardSeries feeds the main dashboard chart: checks by result
+// and average response time for 24 hours (hourly), 7 days (6-hourly) or
+// 30 days (daily).
+func (s *Server) handleDashboardSeries(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	now := time.Now().UTC()
+	var start time.Time
+	var hours, count int
+	switch r.URL.Query().Get("range") {
+	case "7d":
+		hours, count = 6, 28
+		start = now.Truncate(6 * time.Hour).Add(-27 * 6 * time.Hour)
+	case "30d":
+		hours, count = 24, 30
+		start = now.Truncate(24*time.Hour).AddDate(0, 0, -29)
+	default:
+		hours, count = 1, 24
+		start = now.Truncate(time.Hour).Add(-23 * time.Hour)
+	}
+	buckets, err := s.Store.StatusSeries(ctx, start, hours, count)
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	incidents, err := s.Store.CountIncidents(ctx, start)
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	var ok, total int
+	var latSum float64
+	var latN int
+	var worst *store.StatusBucket
+	worstUp := 101.0
+	for i := range buckets {
+		b := &buckets[i]
+		t := b.Up + b.Degraded + b.Down
+		ok += b.Up + b.Degraded
+		total += t
+		if b.AvgMs != nil {
+			latSum += *b.AvgMs * float64(t)
+			latN += t
+		}
+		if t > 0 {
+			if u := float64(b.Up+b.Degraded) * 100 / float64(t); u < worstUp {
+				worstUp, worst = u, b
+			}
+		}
+	}
+	summary := map[string]any{"checks": total, "incidents": incidents, "hours": hours}
+	if total > 0 {
+		summary["uptime"] = float64(ok) * 100 / float64(total)
+	}
+	if latN > 0 {
+		summary["avg_ms"] = latSum / float64(latN)
+	}
+	if worst != nil {
+		summary["worst"] = map[string]any{"t": worst.T, "uptime": worstUp}
+	}
+	writeJSON(w, map[string]any{"buckets": buckets, "summary": summary})
 }
 
 func (s *Server) handleMonitorDetail(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +475,7 @@ func (s *Server) handleMonitorDetail(w http.ResponseWriter, r *http.Request) {
 	if len(results) > 0 {
 		latest = &results[0]
 	}
-	p := &page{Title: m.Name, Active: "dashboard", Data: map[string]any{
+	p := &page{Title: m.Name, Active: "monitors", Data: map[string]any{
 		"M": m, "Uptimes": uptimes, "Results": results, "Events": events, "Latest": latest,
 	}}
 	s.renderStatus(w, r, http.StatusOK, "monitor", p)
