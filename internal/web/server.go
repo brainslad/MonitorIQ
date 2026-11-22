@@ -304,6 +304,38 @@ func cacheFor(d time.Duration, next http.Handler) http.Handler {
 	})
 }
 
+// secureCookie reports whether cookies set in reply to r get the Secure flag.
+// Unless MONITORIQ_COOKIE_SECURE forces it, a cookie is Secure when the
+// browser reached MonitorIQ over HTTPS: directly, through a trusted proxy
+// that says so in X-Forwarded-Proto, or on the host of an https:// base URL.
+// Plain HTTP access (for example http://<ip>:8080 on the local network)
+// gets ordinary cookies, so signing in there keeps working.
+func (s *Server) secureCookie(r *http.Request) bool {
+	if s.Cfg.CookieSecure != nil {
+		return *s.Cfg.CookieSecure
+	}
+	if r.TLS != nil {
+		return true
+	}
+	if s.Cfg.TrustProxy {
+		proto := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0])
+		if strings.EqualFold(proto, "https") {
+			return true
+		}
+	}
+	if u, err := url.Parse(s.Cfg.BaseURL); err == nil && u.Scheme == "https" && u.Host != "" {
+		return strings.EqualFold(stripPort(r.Host), stripPort(u.Host))
+	}
+	return false
+}
+
+func stripPort(h string) string {
+	if host, _, err := net.SplitHostPort(h); err == nil {
+		return host
+	}
+	return strings.Trim(h, "[]")
+}
+
 func (s *Server) clientIP(r *http.Request) string {
 	if s.Cfg.TrustProxy {
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
@@ -427,7 +459,7 @@ func (s *Server) flash(w http.ResponseWriter, r *http.Request, to string, ok boo
 		prefix = "+"
 	}
 	http.SetCookie(w, &http.Cookie{Name: flashCookie, Value: url.QueryEscape(prefix + msg), Path: "/",
-		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: s.Cfg.CookieSecure, MaxAge: 60})
+		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: s.secureCookie(r), MaxAge: 60})
 	http.Redirect(w, r, to, http.StatusSeeOther)
 }
 

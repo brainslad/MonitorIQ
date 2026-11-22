@@ -190,7 +190,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u *store.U
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, Secure: s.Cfg.CookieSecure, MaxAge: int(sessionTTL.Seconds())})
+		SameSite: http.SameSiteLaxMode, Secure: s.secureCookie(r), MaxAge: int(sessionTTL.Seconds())})
 	if mfa == store.MFADone {
 		s.Store.TouchLogin(ctx, u.ID)
 		s.Log.Info("login", "username", u.Username, "method", method, "ip", s.clientIP(r))
@@ -384,7 +384,7 @@ func (s *Server) handleOIDCLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	data, _ := json.Marshal(flow)
 	http.SetCookie(w, &http.Cookie{Name: oidcCookie, Value: s.Box.SignedValue(data), Path: "/auth/oidc/",
-		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: s.Cfg.CookieSecure, MaxAge: 600})
+		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: s.secureCookie(r), MaxAge: 600})
 	http.Redirect(w, r, to, http.StatusFound)
 }
 
