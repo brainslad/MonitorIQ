@@ -84,7 +84,17 @@ func funcMap() template.FuncMap {
 			b, _ := json.Marshal(v)
 			return template.JS(b)
 		},
-		"add":  func(a, b int) int { return a + b },
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		// has reports whether a list of form values holds the id.
+		"has": func(list []string, id int64) bool {
+			for _, v := range list {
+				if v == strconv.FormatInt(id, 10) {
+					return true
+				}
+			}
+			return false
+		},
 		"add2": func(a, b float64) float64 { return a + b },
 		"mul":  func(a, b float64) float64 { return a * b },
 		"km": func(v float64) string {

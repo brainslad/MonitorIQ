@@ -29,28 +29,6 @@ func safeNext(next string) string {
 
 // ---------------------------------------------------------------- dashboard
 
-type hostGroup struct {
-	HostID   int64
-	HostName string
-	Address  string
-	Monitors []store.Monitor
-}
-
-func groupByHost(list []store.Monitor) []hostGroup {
-	var groups []hostGroup
-	idx := map[int64]int{}
-	for _, m := range list {
-		i, ok := idx[m.HostID]
-		if !ok {
-			i = len(groups)
-			idx[m.HostID] = i
-			groups = append(groups, hostGroup{HostID: m.HostID, HostName: m.HostName, Address: m.HostAddress})
-		}
-		groups[i].Monitors = append(groups[i].Monitors, m)
-	}
-	return groups
-}
-
 func monitorIDs(list []store.Monitor) []int64 {
 	ids := make([]int64, len(list))
 	for i, m := range list {
@@ -357,7 +335,24 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Groups, problems first.
+	groups, err := s.Store.ListGroups(ctx)
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	groupSecs := sectionsByGroup(groups, list, false)
+	if n := len(groupSecs); n > 0 && groupSecs[n-1].Kind == "none" {
+		groupSecs = groupSecs[:n-1]
+	}
+	srank := map[string]int{"down": 0, "degraded": 1, "unknown": 2, "up": 3}
+	for i := range groupSecs {
+		groupSecs[i].setUptime(up24)
+	}
+	sort.SliceStable(groupSecs, func(i, j int) bool { return srank[groupSecs[i].Status()] < srank[groupSecs[j].Status()] })
+
 	p := &page{Title: "Dashboard", Active: "dashboard", Data: map[string]any{
+		"Groups": groupSecs, "GroupList": groups,
 		"Monitors": list, "Up24": up24, "Up30": up30, "Bars": bars, "K": k,
 		"Incidents": incidents, "Types": typeList, "Now": now,
 		"Hosts": hosts, "Heat": heat, "HeatPct": heatPct, "Certs": certData,
@@ -568,15 +563,6 @@ func (s *Server) handleHostDelete(w http.ResponseWriter, r *http.Request) {
 
 // ---------------------------------------------------------------- monitors
 
-func (s *Server) handleMonitors(w http.ResponseWriter, r *http.Request) {
-	list, err := s.Store.ListMonitors(r.Context())
-	if err != nil {
-		s.serverError(w, err)
-		return
-	}
-	s.render(w, r, "monitors", "Monitors", "monitors", map[string]any{"Groups": groupByHost(list), "Total": len(list)})
-}
-
 func defaultMonitor() *store.Monitor {
 	return &store.Monitor{Type: checks.TypeHTTP, IntervalSeconds: 60, TimeoutSeconds: 10, Retries: 1, Enabled: true,
 		Config: checks.Config{ExpectedStatus: "200-399", PingCount: 3, MaxHops: 30, RecordType: "A", WarnDays: 14, SMTPTLS: "starttls"}}
@@ -587,7 +573,11 @@ func (s *Server) monitorFormData(r *http.Request, m *store.Monitor) (map[string]
 	if err != nil {
 		return nil, err
 	}
-	data := map[string]any{"M": m, "Hosts": hosts}
+	groups, err := s.Store.ListGroups(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	data := map[string]any{"M": m, "Hosts": hosts, "Groups": groups}
 	if s.Notifier != nil {
 		st := s.emailSettings(r.Context())
 		subs, _ := s.Store.AlertSubscribers(r.Context())
@@ -606,6 +596,7 @@ func (s *Server) handleMonitorForm(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		m.HostID, _ = strconv.ParseInt(r.URL.Query().Get("host"), 10, 64)
+		m.GroupID, _ = strconv.ParseInt(r.URL.Query().Get("group"), 10, 64)
 		if t := r.URL.Query().Get("type"); checks.ValidType(t) {
 			m.Type = t
 		}
@@ -624,9 +615,11 @@ func (s *Server) handleMonitorForm(w http.ResponseWriter, r *http.Request) {
 
 func monitorFromForm(r *http.Request, id int64) *store.Monitor {
 	hostID, _ := strconv.ParseInt(r.PostFormValue("host_id"), 10, 64)
+	groupID, _ := strconv.ParseInt(r.PostFormValue("group_id"), 10, 64)
 	m := &store.Monitor{
 		ID:              id,
 		HostID:          hostID,
+		GroupID:         groupID,
 		Name:            r.PostFormValue("name"),
 		Type:            r.PostFormValue("type"),
 		Target:          r.PostFormValue("target"),
@@ -754,7 +747,11 @@ func (s *Server) statusPageFormData(r *http.Request, p *store.StatusPage) (map[s
 		opts = append(opts, option{M: m, Selected: ok, DisplayName: sel.DisplayName, Position: pos})
 	}
 	sort.SliceStable(opts, func(i, j int) bool { return opts[i].Position < opts[j].Position })
-	return map[string]any{"P": p, "Options": opts, "BaseURL": s.baseURL(r)}, nil
+	groups, err := s.Store.ListGroups(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"P": p, "Options": opts, "BaseURL": s.baseURL(r), "Groups": groups}, nil
 }
 
 func (s *Server) handleStatusPageForm(w http.ResponseWriter, r *http.Request) {
