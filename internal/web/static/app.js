@@ -499,3 +499,37 @@
     if (port.value === "" || known.indexOf(port.value) >= 0) port.value = defaults[sec.value];
   });
 })();
+
+// ---------------------------------------------------------------- export page: quick periods
+(function () {
+  var from = document.querySelector("[data-export-from]");
+  var to = document.querySelector("[data-export-to]");
+  if (!from || !to) return;
+  var iso = function (d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  };
+  document.querySelectorAll("[data-export-preset]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var now = new Date(), a = new Date(now), z = new Date(now);
+      var p = b.getAttribute("data-export-preset");
+      if (p === "yesterday") { a.setDate(a.getDate() - 1); z = new Date(a); }
+      else if (p === "month") { a = new Date(now.getFullYear(), now.getMonth(), 1); }
+      else if (p === "lastmonth") { a = new Date(now.getFullYear(), now.getMonth() - 1, 1); z = new Date(now.getFullYear(), now.getMonth(), 0); }
+      else if (p === "year") { a = new Date(now.getFullYear(), 0, 1); }
+      else if (p === "lastyear") { a = new Date(now.getFullYear() - 1, 0, 1); z = new Date(now.getFullYear() - 1, 11, 31); }
+      else if (p !== "today") { a.setDate(a.getDate() - (parseInt(p, 10) - 1)); }
+      from.value = iso(a);
+      to.value = iso(z);
+    });
+  });
+  from.addEventListener("change", function () { if (to.value && from.value > to.value) to.value = from.value; });
+  to.addEventListener("change", function () { if (from.value && to.value < from.value) from.value = to.value; });
+  // The download does not leave the page: show that it is being prepared.
+  var btn = document.querySelector("[data-export-submit]");
+  var form = btn && btn.form;
+  if (form) form.addEventListener("submit", function () {
+    btn.classList.add("busy");
+    setTimeout(function () { btn.classList.remove("busy"); }, 8000);
+  });
+})();

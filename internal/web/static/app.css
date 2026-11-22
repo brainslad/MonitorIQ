@@ -710,3 +710,13 @@ body.has-bulk main{padding-bottom:90px}
 .dg-row strong small{font-size:.6em;color:var(--muted);font-weight:500}
 .dg-row .stext{font-size:.82em}
 @media (max-width:640px){.sec-actions{margin-left:0;width:100%}.bulk-bar{left:16px;right:16px;transform:none;bottom:12px}}
+
+/* ---------------------------------------------------------------- export page */
+.export-form{max-width:880px}
+.export-form .btn .ic{width:16px;height:16px}
+.export-presets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.export-pick{margin:0 0 14px}
+.export-pick summary{cursor:pointer;font-weight:500;font-size:.92em;margin-bottom:8px}
+.export-pick .search{margin-top:4px}
+.export-form .check > span{line-height:1.45}
+.btn.busy{opacity:.7;pointer-events:none}
