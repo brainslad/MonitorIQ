@@ -26,6 +26,7 @@ import (
 
 	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/config"
+	"github.com/brainslad/monitoriq/internal/notify"
 	"github.com/brainslad/monitoriq/internal/store"
 )
 
@@ -53,6 +54,8 @@ type Server struct {
 	Log   *slog.Logger
 	Box   *auth.Box
 	OIDC  *auth.OIDC
+	// Notifier sends e-mail (set by main; tests may leave it nil).
+	Notifier *notify.Notifier
 
 	pages   map[string]*template.Template
 	limiter *loginLimiter
@@ -164,6 +167,10 @@ func (s *Server) Handler() http.Handler {
 	auth("GET /admin/auth", s.handleAuthSettings)
 	auth("POST /admin/auth", s.handleAuthSettingsSave)
 	auth("POST /admin/auth/ldap-test", s.handleLDAPTest)
+	auth("GET /admin/email", s.handleEmailSettings)
+	auth("POST /admin/email", s.handleEmailSettingsSave)
+	auth("POST /admin/email/test", s.handleEmailTest)
+	auth("POST /account/email", s.handleAccountEmail)
 
 	return s.securityHeaders(s.logRequests(mux))
 }

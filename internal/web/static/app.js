@@ -401,3 +401,15 @@
     });
   }
 })();
+
+// ---------------------------------------------------------------- e-mail settings: default port per connection type
+(function () {
+  var sec = document.querySelector("[data-smtp-security]");
+  var port = document.querySelector("[data-smtp-port]");
+  if (!sec || !port) return;
+  var defaults = { starttls: "587", tls: "465", none: "25" };
+  sec.addEventListener("change", function () {
+    var known = Object.keys(defaults).map(function (k) { return defaults[k]; });
+    if (port.value === "" || known.indexOf(port.value) >= 0) port.value = defaults[sec.value];
+  });
+})();
