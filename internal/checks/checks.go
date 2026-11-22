@@ -1,3 +1,8 @@
+// Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Part of MonitorIQ. Licensed under the GNU GPL v3 or later with an author
+// attribution term (section 7(b)); see LICENSE and NOTICE.
+
 // Package checks implements the individual service probes supported by
 // MonitorIQ: HTTP(S), ping, traceroute, DNS, SMTP, TLS certificate expiry and
 // generic TCP ports.

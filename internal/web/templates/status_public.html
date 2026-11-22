@@ -32,7 +32,7 @@
     </ul>
     {{else}}<p class="muted">No incidents reported.</p>{{end}}
   </section>
-  <footer class="footer muted small">Updated {{fmtTime $v.Updated}} · <a href="/api/status/{{$v.Page.Slug}}">JSON</a> · Powered by MonitorIQ</footer>
+  <footer class="footer muted small">Updated {{fmtTime $v.Updated}} · <a href="/api/status/{{$v.Page.Slug}}">JSON</a> · Powered by {{template "credit" ""}}</footer>
 </main>
 <script src="/static/app.js"></script>
 </body>

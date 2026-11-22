@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Part of MonitorIQ; see LICENSE and NOTICE (author attribution must be kept).
 # Removes MonitorIQ.
 #   sudo ./uninstall.sh           remove the service and binary, keep the configuration and database
 #   sudo ./uninstall.sh --purge   also remove /etc/monitoriq and the 'monitoriq' database

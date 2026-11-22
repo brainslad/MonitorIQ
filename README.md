@@ -2,6 +2,8 @@
 
 <p align="center"><strong>Know before your users do.</strong></p>
 
+<p align="center">Created by <a href="https://github.com/brainslad">Brainslad</a></p>
+
 <p align="center">
 Self-hosted uptime and service monitoring for Rocky Linux 8, 9 and 10.<br>
 One Go binary · PostgreSQL · dashboard, back-office and public status pages · up to 2 years of history.
@@ -12,7 +14,8 @@ One Go binary · PostgreSQL · dashboard, back-office and public status pages ·
   <a href="#screens">Screens</a> ·
   <a href="#authentication">Authentication</a> ·
   <a href="#configuration">Configuration</a> ·
-  <a href="LICENSE">GPL-3.0</a>
+  <a href="#license">GPL-3.0</a> ·
+  <a href="#author">Author</a>
 </p>
 
 ![MonitorIQ dashboard](docs/screenshots/dashboard-light.png)
@@ -323,8 +326,15 @@ install.sh              installer for Rocky Linux 8/9/10
 
 To publish a release: `git tag v0.4.0 && git push --tags`. The `.github/workflows/release.yml` workflow builds the amd64/arm64 packages and creates the GitHub release.
 
+## Author
+
+MonitorIQ is created and maintained by **[Brainslad](https://github.com/brainslad)**. If you use it, a star on the [repository](https://github.com/brainslad/MonitorIQ) or a mention is appreciated.
+
 ## License
 
-[GNU GPL v3 or later](LICENSE). You may use, modify and redistribute MonitorIQ; modified versions you distribute must keep the same license and make their source code available.
+Copyright (C) 2026 Brainslad. [GNU GPL v3 or later](LICENSE), with one additional term under section 7(b) (see [NOTICE](NOTICE)).
 
-Bundles [Chart.js](https://www.chartjs.org/) (MIT) and the [JetBrains Mono](https://www.jetbrains.com/lp/mono/) font (SIL OFL 1.1). See [NOTICE](NOTICE).
+- You may use, modify and redistribute MonitorIQ, also commercially. Modified versions you distribute must keep the same license and make their source code available.
+- **Author attribution must be kept.** The "MonitorIQ by Brainslad" credit with a link to this repository must stay visible in the footer of the web interface, the sign-in pages and the public status pages, together with the copyright notices, the NOTICE file and a credit in the documentation of modified versions.
+
+Bundles [Chart.js](https://www.chartjs.org/) (MIT) and the [JetBrains Mono](https://www.jetbrains.com/lp/mono/) and [Inter](https://rsms.me/inter/) fonts (SIL OFL 1.1). See [NOTICE](NOTICE).
