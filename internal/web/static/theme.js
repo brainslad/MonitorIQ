@@ -1,3 +1,6 @@
+/* Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Part of MonitorIQ; see LICENSE and NOTICE (author attribution must be kept). */
 // Applies the saved colour theme and sidebar state before the page paints (loaded in <head>).
 (function () {
   try {

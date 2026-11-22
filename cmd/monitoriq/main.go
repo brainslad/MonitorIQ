@@ -1,6 +1,8 @@
 // Command monitoriq is a self-hosted uptime and service monitoring server.
 //
-// Copyright (C) 2026 MonitorIQ contributors. Licensed under the GNU GPL v3 or later; see LICENSE.
+// Copyright (C) 2026 Brainslad <https://github.com/brainslad>. Licensed under the GNU GPL v3 or later
+// with an author attribution term (section 7(b)); see LICENSE and NOTICE.
+// SPDX-License-Identifier: GPL-3.0-or-later
 package main
 
 import (
@@ -33,7 +35,7 @@ var version = "dev"
 const defaultEnvFile = "/etc/monitoriq/monitoriq.env"
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `MonitorIQ %s — Know before your users do.
+	fmt.Fprintf(os.Stderr, `MonitorIQ %s by Brainslad — Know before your users do.
 
 Usage:
   monitoriq serve                         start the web server and the check scheduler
@@ -166,7 +168,7 @@ func serve() {
 	go func() { sched.Run(ctx); close(done) }()
 
 	go func() {
-		log.Info("MonitorIQ listening", "address", cfg.Listen, "version", version)
+		log.Info("MonitorIQ listening", "address", cfg.Listen, "version", version, "author", "Brainslad (https://github.com/brainslad/MonitorIQ)")
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("HTTP server", "err", err)
 			stop()
