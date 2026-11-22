@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -317,7 +318,7 @@ func (s *Server) secureCookie(r *http.Request) bool {
 	if r.TLS != nil {
 		return true
 	}
-	if s.Cfg.TrustProxy {
+	if s.fromTrustedProxy(r) {
 		proto := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0])
 		if strings.EqualFold(proto, "https") {
 			return true
@@ -336,20 +337,60 @@ func stripPort(h string) string {
 	return strings.Trim(h, "[]")
 }
 
-func (s *Server) clientIP(r *http.Request) string {
-	if s.Cfg.TrustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			return strings.TrimSpace(strings.Split(xff, ",")[0])
-		}
-		if xr := r.Header.Get("X-Real-IP"); xr != "" {
-			return xr
+// fromTrustedProxy reports whether the request came through a proxy whose
+// X-Forwarded-* headers can be believed.
+func (s *Server) fromTrustedProxy(r *http.Request) bool {
+	if !s.Cfg.TrustProxy {
+		return false
+	}
+	if len(s.Cfg.TrustedProxies) == 0 {
+		return true
+	}
+	return s.isTrustedAddr(remoteHost(r))
+}
+
+func (s *Server) isTrustedAddr(host string) bool {
+	a, err := netip.ParseAddr(strings.TrimSpace(host))
+	if err != nil {
+		return false
+	}
+	a = a.Unmap()
+	for _, p := range s.Cfg.TrustedProxies {
+		if p.Contains(a) {
+			return true
 		}
 	}
+	return false
+}
+
+func remoteHost(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func (s *Server) clientIP(r *http.Request) string {
+	if s.fromTrustedProxy(r) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			if len(s.Cfg.TrustedProxies) == 0 {
+				return strings.TrimSpace(parts[0])
+			}
+			// With known proxies, the client is the last address that is not
+			// one of them: entries further left can be forged by the client.
+			for i := len(parts) - 1; i >= 0; i-- {
+				if p := strings.TrimSpace(parts[i]); p != "" && !s.isTrustedAddr(p) {
+					return p
+				}
+			}
+		}
+		if xr := strings.TrimSpace(r.Header.Get("X-Real-IP")); xr != "" {
+			return xr
+		}
+	}
+	return remoteHost(r)
 }
 
 // ---------------------------------------------------------------- login limiter

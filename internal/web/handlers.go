@@ -716,7 +716,7 @@ func (s *Server) baseURL(r *http.Request) string {
 		return s.Cfg.BaseURL
 	}
 	scheme := "http"
-	if r.TLS != nil || (s.Cfg.TrustProxy && r.Header.Get("X-Forwarded-Proto") == "https") {
+	if r.TLS != nil || (s.fromTrustedProxy(r) && r.Header.Get("X-Forwarded-Proto") == "https") {
 		scheme = "https"
 	}
 	return scheme + "://" + r.Host
