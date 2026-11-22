@@ -40,3 +40,13 @@ Third-party components bundled in internal/web/static/:
   SIL Open Font License 1.1 (see fonts/OFL.txt).
 - Inter font, (c) 2016 The Inter Project Authors,
   SIL Open Font License 1.1 (see fonts/Inter-OFL.txt).
+- world.svg: land outlines from Natural Earth (public domain), taken from
+  world-atlas, (c) 2013-2019 Michael Bostock, ISC License.
+
+Go libraries:
+- github.com/oschwald/maxminddb-golang, (c) 2015 Gregory J. Oschwald,
+  ISC License.
+
+Geolocation data (downloaded at run time, not bundled):
+- DB-IP Lite databases, (c) DB-IP.com, Creative Commons Attribution 4.0
+  International (https://db-ip.com). Pages that show the data credit DB-IP.

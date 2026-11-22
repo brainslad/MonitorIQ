@@ -56,7 +56,8 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 
 - **Dashboard** with a greeting and summary line, a chart of every check by result with the average response time (24 hours, 7 days or 30 days), a fleet-health card per host, an hour-by-hour availability map, a certificate-renewal tracker, live incidents and a monitor table with status/type filters, search and hour-by-hour availability bars.
 - **Sidebar navigation** grouped into Monitoring, Administration and Account, with live counts, a collapsible layout and a quick search (press `/`).
-- **Dark and light mode**: follows the operating system by default and can be toggled from the top bar (the choice is remembered in the browser).
+- **Dark and light mode**: follows the operating system by default and can be toggled from the top bar (the choice is remembered in the browser). The light theme uses graphite and steel-blue tones with frosted-glass cards.
+- **Network map and IP information**: a world map on the dashboard shows where every monitor points, seen from the monitoring system, and each monitor page shows the path from this server to its target (with traceroute hops) next to the public IP, reverse DNS, network operator (ASN), city, country and coordinates of both ends, the distance and the light-speed minimum round-trip time. Lookups use a local database (free DB-IP Lite or MaxMind GeoLite2), so addresses never leave the server.
 - **Monitor page** with 24h/7d/30d/1-year uptime, a latency and availability chart from 1 hour to 2 years, last-check details (certificate, DNS answers, traceroute hops…), events and history.
 - **Back-office** to manage hosts, monitors (interval, timeout, failures before alerting, pause), status pages, users and retention.
 - **Public status pages** (`/status/<name>`) with overall status, 90-day availability bars, incidents from the last 14 days, custom public names and a JSON API (`/api/status/<name>`). They can be embedded in another site with an `<iframe>`.
@@ -75,7 +76,7 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 
 ### Dashboard
 
-Everything at a glance. The top chart stacks every check by result (operational, degraded, down) with the average response time as a dotted line, and shows the weakest period of the range. The dark card sums up fleet health per host, open incidents and 30-day uptime. Below sit live incidents, an hour-by-hour availability map and a certificate-renewal tracker for TLS and HTTPS monitors, followed by the filterable table of all monitors. It refreshes every minute.
+Everything at a glance. The top chart stacks every check by result (operational, degraded, down) with the average response time as a dotted line, and shows the weakest period of the range. The dark card sums up fleet health per host, open incidents and 30-day uptime. Below sit live incidents, an hour-by-hour availability map and a certificate-renewal tracker for TLS and HTTPS monitors, the network map, and the filterable table of all monitors. It refreshes every minute.
 
 | Light mode | Dark mode |
 |---|---|
@@ -86,6 +87,14 @@ Everything at a glance. The top chart stacks every check by result (operational,
 Uptime for 24 hours, 7 days, 30 days and 1 year, a latency and availability chart from 1 hour to 2 years, the details of the last check (certificate, DNS answers, traceroute hops…), status changes and recent results.
 
 ![Monitor details](docs/screenshots/monitor.png)
+
+### Network location
+
+Each monitor page has a map from the monitoring system to the target, with the hops of the last traceroute in between. Beside it: the public and local addresses of this server, and every address the target resolves to, with reverse DNS, network operator (ASN), prefix, city, country, coordinates and time zone. Private and loopback targets are marked as such and drawn at the server's own location. The distance gives the light-speed minimum round-trip time to compare with the measured latency.
+
+| Monitor with its route | Settings → Geolocation |
+|---|---|
+| ![Network location of a monitor](docs/screenshots/monitor-map.png) | ![Geolocation settings](docs/screenshots/geo-settings.png) |
 
 ### Public status pages
 
@@ -259,6 +268,14 @@ Open **Settings → Email**, enter your SMTP server and sender address, tick *Se
 - **Log:** the last messages and any errors are listed on the same page and in the service log (`journalctl -u monitoriq`).
 - The SMTP password is encrypted in the database with `MONITORIQ_SECRET_KEY`. Usernames and passwords are only sent over STARTTLS or TLS (except to `localhost`).
 
+### Network map and geolocation
+
+1. Open **Settings → Geolocation** and press **Download DB-IP Lite** (or run `sudo -u monitoriq monitoriq geoip update`). This saves the free [DB-IP Lite](https://db-ip.com/db/lite.php) city and ASN databases (about 130 MB, CC BY 4.0) to `/var/lib/monitoriq/geoip`. Tick *Download the new database edition every month* to keep them current. To use MaxMind GeoLite2 instead, copy `GeoLite2-City.mmdb` and `GeoLite2-ASN.mmdb` there as `city.mmdb` and `asn.mmdb`; the server reloads changed files within an hour.
+2. **Public IP of this server:** detected automatically by asking `https://api.ipify.org` every 6 hours (any service that returns the address as plain text works), typed in by hand, or not shown at all.
+3. **Location of this server:** taken from the database for its public address. Behind NAT, a VPN or a proxy, set the latitude and longitude by hand.
+
+Lookups of targets happen locally: names are resolved with the server's DNS (results cached for 10 minutes), and the database is read from disk. Only the optional public-IP detection and the database download make outbound requests. Maps credit the database as its licence requires.
+
 ### Command line
 
 ```bash
@@ -275,6 +292,8 @@ monitoriq check smtp mail.example.com 587 --config '{"smtp_tls":"starttls"}'
 monitoriq check tcp example.com 3306
 monitoriq email test you@example.com           # send a test e-mail with the saved settings
 monitoriq email digest                         # send the certificate digest now
+monitoriq geoip update                         # download the DB-IP Lite geolocation databases
+monitoriq geoip lookup example.com             # location, network and reverse DNS of a host or IP
 monitoriq version
 ```
 
@@ -292,6 +311,7 @@ File `/etc/monitoriq/monitoriq.env` (see [`deploy/monitoriq.env.example`](deploy
 | `MONITORIQ_SECRET_KEY` | generated by the installer | Encrypts 2FA keys and LDAP/SSO secrets. **Back it up and never change it** |
 | `MONITORIQ_DATA_DIR` | `/var/lib/monitoriq` | Where a key file is created when `MONITORIQ_SECRET_KEY` is empty |
 | `MONITORIQ_MAX_CONCURRENCY` | `50` | Concurrent checks |
+| `MONITORIQ_GEOIP_DIR` | `$MONITORIQ_DATA_DIR/geoip` | Geolocation databases (`city.mmdb`, `asn.mmdb`) |
 | `MONITORIQ_DEBUG` | — | `1` logs every HTTP request |
 
 After changing it: `sudo systemctl restart monitoriq`.
@@ -358,4 +378,4 @@ Copyright (C) 2026 Brainslad. [GNU GPL v3 or later](LICENSE), with one additiona
 - You may use, modify and redistribute MonitorIQ, also commercially. Modified versions you distribute must keep the same license and make their source code available.
 - **Author attribution must be kept.** The "MonitorIQ by Brainslad" credit with a link to this repository must stay visible in the footer of the web interface, the sign-in pages and the public status pages, together with the copyright notices, the NOTICE file and a credit in the documentation of modified versions.
 
-Bundles [Chart.js](https://www.chartjs.org/) (MIT) and the [JetBrains Mono](https://www.jetbrains.com/lp/mono/) and [Inter](https://rsms.me/inter/) fonts (SIL OFL 1.1). See [NOTICE](NOTICE).
+Bundles [Chart.js](https://www.chartjs.org/) (MIT), the [JetBrains Mono](https://www.jetbrains.com/lp/mono/) and [Inter](https://rsms.me/inter/) fonts (SIL OFL 1.1), and a world map from [Natural Earth](https://www.naturalearthdata.com/) (public domain) via [world-atlas](https://github.com/topojson/world-atlas) (ISC). Reads geolocation databases with [maxminddb-golang](https://github.com/oschwald/maxminddb-golang) (ISC). The DB-IP Lite data it downloads is © DB-IP.com, CC BY 4.0. See [NOTICE](NOTICE).

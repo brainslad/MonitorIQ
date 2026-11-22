@@ -55,13 +55,13 @@ func headline(it Item) string {
 func color(s checks.Status) string {
 	switch s {
 	case checks.Up:
-		return "#1f8f74"
+		return "#2f8a68"
 	case checks.Degraded:
-		return "#c07a12"
+		return "#c08a2e"
 	case checks.Down:
-		return "#d63c33"
+		return "#c2504a"
 	}
-	return "#67737a"
+	return "#68727c"
 }
 
 // AlertMessage builds the e-mail for one or more status changes.
@@ -163,9 +163,9 @@ func DigestMessage(items []CertItem, days int, base string) Message {
 	}
 	rows := make([]row, len(items))
 	for i, c := range items {
-		col := "#c07a12"
+		col := "#c08a2e"
 		if c.DaysLeft < 7 {
-			col = "#d63c33"
+			col = "#c2504a"
 		}
 		rows[i] = row{CertItem: c, Left: leftText(c.DaysLeft), Date: c.NotAfter.Local().Format("2006-01-02"), Color: col}
 	}
@@ -210,44 +210,44 @@ func render(t *template.Template, data any) string {
 }
 
 const layout = `{{define "page"}}<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{{.Title}}</title></head>
-<body style="margin:0;padding:0;background:#f6f3ef;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#13232a">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f3ef;padding:24px 12px"><tr><td align="center">
+<body style="margin:0;padding:0;background:#f2f3f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f252c">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f3f5;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
-<tr><td style="padding:0 4px 14px;font-size:18px;font-weight:700;letter-spacing:-.3px">Monitor<span style="color:#1b6a80">IQ</span></td></tr>
-<tr><td style="background:#ffffff;border:1px solid #ece6e0;border-radius:16px;padding:22px 24px">{{template "body" .}}</td></tr>
-<tr><td style="padding:14px 4px;font-size:12px;color:#67737a">
-{{if .Base}}<a href="{{.Base}}/" style="color:#1b6a80">Open the dashboard</a> · {{end}}<a href="https://github.com/brainslad/MonitorIQ" style="color:#67737a">MonitorIQ</a> by <a href="https://github.com/brainslad" style="color:#67737a">Brainslad</a> · Know before your users do.
+<tr><td style="padding:0 4px 14px;font-size:18px;font-weight:700;letter-spacing:-.3px">Monitor<span style="color:#3d6e8c">IQ</span></td></tr>
+<tr><td style="background:#ffffff;border:1px solid #e1e4e8;border-radius:16px;padding:22px 24px">{{template "body" .}}</td></tr>
+<tr><td style="padding:14px 4px;font-size:12px;color:#68727c">
+{{if .Base}}<a href="{{.Base}}/" style="color:#3d6e8c">Open the dashboard</a> · {{end}}<a href="https://github.com/brainslad/MonitorIQ" style="color:#68727c">MonitorIQ</a> by <a href="https://github.com/brainslad" style="color:#68727c">Brainslad</a> · Know before your users do.
 </td></tr></table></td></tr></table></body></html>{{end}}`
 
 var alertTpl = template.Must(template.New("").Parse(layout + `{{define "body"}}
-{{range $i, $r := .Rows}}{{if $i}}<hr style="border:0;border-top:1px solid #ece6e0;margin:18px 0">{{end}}
+{{range $i, $r := .Rows}}{{if $i}}<hr style="border:0;border-top:1px solid #e1e4e8;margin:18px 0">{{end}}
 <div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:{{$r.Color}}">● {{if and (eq $r.To 1) (eq $r.From 3)}}RECOVERED{{else if eq $r.To 1}}OPERATIONAL{{else if eq $r.To 2}}DEGRADED{{else}}DOWN{{end}}</div>
-<div style="font-size:20px;font-weight:700;margin:4px 0 10px">{{$r.Name}} <span style="font-weight:500;color:#67737a">{{$r.Headline}}</span></div>
+<div style="font-size:20px;font-weight:700;margin:4px 0 10px">{{$r.Name}} <span style="font-weight:500;color:#68727c">{{$r.Headline}}</span></div>
 <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.6">
-<tr><td style="color:#67737a;padding-right:14px">Host</td><td>{{$r.Host}}</td></tr>
-<tr><td style="color:#67737a;padding-right:14px">Target</td><td style="font-family:Menlo,Consolas,monospace;font-size:13px">{{$r.Target}} <span style="color:#67737a">({{$r.Type}})</span></td></tr>
-<tr><td style="color:#67737a;padding-right:14px">Since</td><td>{{$r.When}}</td></tr>
-{{if $r.Lasted}}<tr><td style="color:#67737a;padding-right:14px">Was {{$r.FromWord}}</td><td>for {{$r.Lasted}}</td></tr>{{end}}
-{{if $r.Message}}<tr><td style="color:#67737a;padding-right:14px;vertical-align:top">Result</td><td>{{$r.Message}}</td></tr>{{end}}
+<tr><td style="color:#68727c;padding-right:14px">Host</td><td>{{$r.Host}}</td></tr>
+<tr><td style="color:#68727c;padding-right:14px">Target</td><td style="font-family:Menlo,Consolas,monospace;font-size:13px">{{$r.Target}} <span style="color:#68727c">({{$r.Type}})</span></td></tr>
+<tr><td style="color:#68727c;padding-right:14px">Since</td><td>{{$r.When}}</td></tr>
+{{if $r.Lasted}}<tr><td style="color:#68727c;padding-right:14px">Was {{$r.FromWord}}</td><td>for {{$r.Lasted}}</td></tr>{{end}}
+{{if $r.Message}}<tr><td style="color:#68727c;padding-right:14px;vertical-align:top">Result</td><td>{{$r.Message}}</td></tr>{{end}}
 </table>
-{{if $r.URL}}<p style="margin:14px 0 0"><a href="{{$r.URL}}" style="display:inline-block;background:#1b6a80;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px">View monitor</a></p>{{end}}
+{{if $r.URL}}<p style="margin:14px 0 0"><a href="{{$r.URL}}" style="display:inline-block;background:#3d6e8c;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px">View monitor</a></p>{{end}}
 {{end}}{{end}}`))
 
 var digestTpl = template.Must(template.New("").Parse(layout + `{{define "body"}}
-<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#c07a12">● CERTIFICATE RENEWAL</div>
+<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#c08a2e">● CERTIFICATE RENEWAL</div>
 <div style="font-size:20px;font-weight:700;margin:4px 0 6px">{{len .Rows}} certificate{{if gt (len .Rows) 1}}s{{end}} expire within {{.Days}} days</div>
-<p style="margin:0 0 14px;color:#67737a;font-size:14px">Renew them before they expire to avoid browser and client errors.</p>
+<p style="margin:0 0 14px;color:#68727c;font-size:14px">Renew them before they expire to avoid browser and client errors.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
-{{range .Rows}}<tr><td style="padding:10px 0;border-top:1px solid #ece6e0">{{if .URL}}<a href="{{.URL}}" style="color:#13232a;font-weight:600;text-decoration:none">{{.Name}}</a>{{else}}<strong>{{.Name}}</strong>{{end}}<br><span style="color:#67737a;font-size:13px">{{.Target}}{{if .Issuer}} · {{.Issuer}}{{end}}</span></td>
-<td align="right" style="padding:10px 0;border-top:1px solid #ece6e0;white-space:nowrap"><strong style="color:{{.Color}}">{{.Left}}</strong><br><span style="color:#67737a;font-size:13px">{{.Date}}</span></td></tr>{{end}}
+{{range .Rows}}<tr><td style="padding:10px 0;border-top:1px solid #e1e4e8">{{if .URL}}<a href="{{.URL}}" style="color:#1f252c;font-weight:600;text-decoration:none">{{.Name}}</a>{{else}}<strong>{{.Name}}</strong>{{end}}<br><span style="color:#68727c;font-size:13px">{{.Target}}{{if .Issuer}} · {{.Issuer}}{{end}}</span></td>
+<td align="right" style="padding:10px 0;border-top:1px solid #e1e4e8;white-space:nowrap"><strong style="color:{{.Color}}">{{.Left}}</strong><br><span style="color:#68727c;font-size:13px">{{.Date}}</span></td></tr>{{end}}
 </table>{{end}}`))
 
 var testTpl = template.Must(template.New("").Parse(layout + `{{define "body"}}
-<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#1f8f74">● TEST MESSAGE</div>
+<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#2f8a68">● TEST MESSAGE</div>
 <div style="font-size:20px;font-weight:700;margin:4px 0 10px">E-mail from MonitorIQ works</div>
 <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.6">
-<tr><td style="color:#67737a;padding-right:14px">Server</td><td>{{.Server}}</td></tr>
-<tr><td style="color:#67737a;padding-right:14px">Sent by</td><td>{{.By}}</td></tr>
-<tr><td style="color:#67737a;padding-right:14px">Time</td><td>{{.When}}</td></tr>
+<tr><td style="color:#68727c;padding-right:14px">Server</td><td>{{.Server}}</td></tr>
+<tr><td style="color:#68727c;padding-right:14px">Sent by</td><td>{{.By}}</td></tr>
+<tr><td style="color:#68727c;padding-right:14px">Time</td><td>{{.When}}</td></tr>
 </table>
 <p style="margin:14px 0 0;font-size:14px">Alerts will be sent from <strong>{{.From}}</strong>.</p>{{end}}`))
