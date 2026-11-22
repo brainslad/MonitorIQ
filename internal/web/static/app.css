@@ -541,3 +541,10 @@ a.tile:hover{text-decoration:none;background:rgba(255,255,255,.1)}
 .credit a{color:inherit;font-weight:600}
 .center-page{flex-direction:column;gap:6px}
 .center-credit{padding:12px 0 0}
+
+/* e-mail settings */
+.email-bottom{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.email-bottom .ellipsis{max-width:26ch}
+.form label.check{align-items:flex-start}
+.form label.check input{margin-top:3px}
+@media (max-width:800px){.email-bottom{grid-template-columns:1fr}}

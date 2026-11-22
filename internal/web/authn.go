@@ -460,6 +460,7 @@ func (s *Server) accountData(r *http.Request, secret string) (map[string]any, er
 		"Method":       sessionFrom(r).Method,
 		"RecoveryLeft": s.Store.RecoveryCodesLeft(ctx, u.ID),
 		"Mandatory":    st.Require2FA && u.Source != store.SourceOIDC,
+		"EmailOn":      s.Notifier == nil || s.emailSettings(ctx).Enabled,
 	}
 	if !u.TOTPEnabled {
 		setup, err := s.newSetup(u, secret)

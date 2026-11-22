@@ -225,6 +225,10 @@ func (s *Store) Purge(ctx context.Context) (PurgeStats, error) {
 		now.Add(-time.Duration(r.EventsDays)*day)); err != nil {
 		return st, err
 	}
+	if _, err = s.Pool.Exec(ctx, `DELETE FROM email_log WHERE created_at < $1`,
+		now.Add(-time.Duration(r.EventsDays)*day)); err != nil {
+		return st, err
+	}
 	tag, err := s.Pool.Exec(ctx, `DELETE FROM sessions WHERE expires_at < now()`)
 	if err == nil {
 		st.Sessions = tag.RowsAffected()

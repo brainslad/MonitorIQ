@@ -65,6 +65,7 @@ MonitorIQ watches your websites and network services and tells you, on one scree
   - hourly aggregates used by charts and long-term uptime (default 730 days);
   - events/incidents (default 730 days).
   Cleanup runs automatically every hour.
+- **E-mail alerts** through any SMTP server (STARTTLS, TLS or a local relay, with authentication): a message when a monitor goes down, recovers or becomes degraded, a daily digest of certificates that expire soon, per-monitor recipients and muting, users who opt in from *My account*, a test button and a log of sent messages.
 - **Sign-in options**: local accounts, **LDAP / Active Directory** (with group restriction) and **single sign-on** through OpenID Connect: **Microsoft Entra ID (Azure AD)**, Google Workspace, Okta, Keycloak, Authentik, AD FS…
 - **Two-factor authentication** with any authenticator app (TOTP, QR code), 10 single-use recovery codes, and an option to make it mandatory.
 - **Security**: bcrypt passwords, server-side sessions, CSRF protection, login and 2FA rate limiting, AES-256-GCM encryption of stored secrets, CSP headers, a hardened systemd unit and an unprivileged service user.
@@ -103,6 +104,8 @@ A page to share with customers at `/status/<name>`: overall status, 90 days of d
 | ![Monitor editor](docs/screenshots/monitor-form.png) | ![Status page editor](docs/screenshots/status-page-form.png) |
 | **Users:** sign-in source and 2FA state, reset 2FA | **Settings → Data retention:** 1 to 730 days per data type |
 | ![Users](docs/screenshots/users.png) | ![Retention settings](docs/screenshots/settings.png) |
+| **Settings → Email:** SMTP server, recipients, which changes to send, certificate digest, test message and log | **Alert e-mail:** what a down alert looks like |
+| ![Email settings](docs/screenshots/email-settings.png) | ![Alert e-mail](docs/screenshots/email-alert.png) |
 
 ### Sign-in and security
 
@@ -240,6 +243,22 @@ Other providers work the same way with their issuer URL, e.g. `https://accounts.
 
 *Show only the SSO button* hides the password form; it stays reachable at `/login?local=1`. If a misconfiguration locks you out, run `monitoriq auth local-login on` on the server.
 
+### E-mail alerts
+
+Open **Settings → Email**, enter your SMTP server and sender address, tick *Send e-mail* and press **Send test**.
+
+| Provider | Host | Port | Connection |
+|---|---|---|---|
+| Microsoft 365 / Exchange Online | `smtp.office365.com` | 587 | STARTTLS (the mailbox needs *Authenticated SMTP* enabled) |
+| Google Workspace / Gmail | `smtp.gmail.com` | 587 | STARTTLS, with an app password |
+| Your own mail server | `mail.example.com` | 587 or 465 | STARTTLS or TLS |
+| Postfix relay on the same server | `localhost` | 25 | No encryption, no username |
+
+- **What is sent:** an alert when a monitor goes **down** and when it **recovers** (on by default), optionally when it becomes **degraded**, and a daily **certificate digest** listing TLS/HTTPS certificates that expire within N days. Changes within 20 seconds are grouped into one message. *Failures before alerting* on each monitor avoids alerts for a single failed check.
+- **Who gets it:** the addresses under *Send every alert to*, users who ticked *Email me* under **My account** (local users enter their address there; LDAP and SSO users use the address from the directory), and the extra recipients of each monitor. A monitor can also be muted.
+- **Log:** the last messages and any errors are listed on the same page and in the service log (`journalctl -u monitoriq`).
+- The SMTP password is encrypted in the database with `MONITORIQ_SECRET_KEY`. Usernames and passwords are only sent over STARTTLS or TLS (except to `localhost`).
+
 ### Command line
 
 ```bash
@@ -254,6 +273,8 @@ monitoriq check tls example.com
 monitoriq check dns example.com --config '{"record_type":"MX"}'
 monitoriq check smtp mail.example.com 587 --config '{"smtp_tls":"starttls"}'
 monitoriq check tcp example.com 3306
+monitoriq email test you@example.com           # send a test e-mail with the saved settings
+monitoriq email digest                         # send the certificate digest now
 monitoriq version
 ```
 

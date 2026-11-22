@@ -25,6 +25,7 @@ import (
 	"github.com/brainslad/monitoriq/internal/auth"
 	"github.com/brainslad/monitoriq/internal/checks"
 	"github.com/brainslad/monitoriq/internal/config"
+	"github.com/brainslad/monitoriq/internal/notify"
 	"github.com/brainslad/monitoriq/internal/scheduler"
 	"github.com/brainslad/monitoriq/internal/store"
 	"github.com/brainslad/monitoriq/internal/web"
@@ -47,6 +48,8 @@ Usage:
   monitoriq auth local-login on           show the password form again if SSO-only
                                           sign-in locks you out
   monitoriq check <type> <target> [port]  run a one-off check (diagnostics)
+  monitoriq email test <address>          send a test e-mail with the saved settings
+  monitoriq email digest                  send the certificate digest now
   monitoriq version                       print the version
 
 Global options:
@@ -88,6 +91,8 @@ func main() {
 		authCmd(args[1:])
 	case "check":
 		checkCmd(args[1:])
+	case "email":
+		emailCmd(args[1:])
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	case "help", "-h", "--help":
@@ -150,10 +155,12 @@ func serve() {
 	}
 	log.Info("secret key loaded", "from", keySrc)
 
+	mailer := notify.New(st, box, log, cfg.BaseURL)
 	srv, err := web.New(st, cfg, box, log)
 	if err != nil {
 		fatal("%v", err)
 	}
+	srv.Notifier = mailer
 	httpSrv := &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           srv.Handler(),
@@ -164,8 +171,11 @@ func serve() {
 	}
 
 	sched := scheduler.New(st, cfg.MaxConcurrency, log)
+	sched.OnTransition = mailer.Notify
 	done := make(chan struct{})
 	go func() { sched.Run(ctx); close(done) }()
+	mailDone := make(chan struct{})
+	go func() { mailer.Run(ctx); close(mailDone) }()
 
 	go func() {
 		log.Info("MonitorIQ listening", "address", cfg.Listen, "version", version, "author", "Brainslad (https://github.com/brainslad/MonitorIQ)")
@@ -182,6 +192,10 @@ func serve() {
 	_ = httpSrv.Shutdown(sctx)
 	select {
 	case <-done:
+	case <-sctx.Done():
+	}
+	select {
+	case <-mailDone:
 	case <-sctx.Done():
 	}
 }
@@ -314,4 +328,45 @@ func checkCmd(args []string) {
 	if res.Status == checks.Down {
 		os.Exit(1)
 	}
+}
+
+func emailCmd(args []string) {
+	if len(args) == 0 || (args[0] == "test" && len(args) != 2) || (args[0] != "test" && args[0] != "digest") {
+		fatal("usage: monitoriq email test <address> | monitoriq email digest")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		fatal("%v", err)
+	}
+	st := openStore()
+	defer st.Close()
+	ctx := context.Background()
+	if err := st.Migrate(ctx); err != nil {
+		fatal("migrations: %v", err)
+	}
+	box, _, err := auth.LoadBox(cfg.SecretKey, cfg.DataDir)
+	if err != nil {
+		fatal("secret key: %v", err)
+	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	n := notify.New(st, box, log, cfg.BaseURL)
+	es, err := n.Settings(ctx)
+	if err != nil {
+		fatal("e-mail settings: %v", err)
+	}
+	if args[0] == "digest" {
+		if !es.Enabled {
+			fatal("e-mail is turned off under Settings → Email")
+		}
+		sent, err := n.SendDigest(ctx, es)
+		if err != nil {
+			fatal("%v", err)
+		}
+		fmt.Printf("%d message(s) sent.\n", sent)
+		return
+	}
+	if err := n.SendTest(ctx, es, args[1], "command line"); err != nil {
+		fatal("%v", err)
+	}
+	fmt.Println("Test message sent to " + args[1] + ".")
 }

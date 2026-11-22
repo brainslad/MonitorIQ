@@ -13,6 +13,15 @@
   </dl>
   <form method="post" action="/account/sessions/revoke" data-confirm="Sign out all your other sessions?">{{template "csrf" .CSRF}}<button class="btn small">Sign out my other sessions</button></form>
 </section>
+<form class="card form" method="post" action="/account/email">
+  <h2>Email alerts</h2>
+  {{template "csrf" .CSRF}}
+  {{if $u.IsLocal}}<label>E-mail address<input name="email" type="email" value="{{$u.Email}}" placeholder="you@example.com" autocomplete="email"></label>
+  {{else}}<p class="muted small">{{if $u.Email}}Alerts go to <strong>{{$u.Email}}</strong>, the address from {{if eq $u.Source "ldap"}}your directory{{else}}your identity provider{{end}}.{{else}}Your {{if eq $u.Source "ldap"}}directory{{else}}identity provider{{end}} did not provide an e-mail address.{{end}}</p>{{end}}
+  <label class="check"><input type="checkbox" name="email_alerts" value="1" {{if $u.EmailAlerts}}checked{{end}}> Email me when a monitor goes down or recovers, and about certificates that expire soon</label>
+  {{if not .Data.EmailOn}}<p class="muted small">Sending e-mail is not turned on yet on this server.</p>{{end}}
+  <div class="form-actions"><button class="btn primary">Save</button></div>
+</form>
 {{if $u.IsLocal}}
 <form class="card form" method="post" action="/account/password">
   <h2>Change my password</h2>

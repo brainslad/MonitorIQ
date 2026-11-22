@@ -1,0 +1,90 @@
+{{template "top" .}}{{$s := .Data.S}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "email"}}
+{{if .Data.TestMsg}}<div class="flash {{if .Data.TestOK}}ok{{else}}err{{end}}" role="status">{{.Data.TestMsg}}</div>{{end}}
+<form class="form" method="post" action="/admin/email">
+{{template "csrf" .CSRF}}
+<input type="hidden" name="password_enc" value="{{.Data.PasswordEnc}}">
+<div class="grid2">
+<section class="card">
+  <h2>Mail server (SMTP)</h2>
+  <label class="check"><input type="checkbox" name="enabled" value="1" {{if $s.Enabled}}checked{{end}}> Send e-mail</label>
+  <p class="muted small">Use your company mail server, Microsoft 365 (<code>smtp.office365.com</code>, 587, STARTTLS), Google Workspace (<code>smtp.gmail.com</code>, 587, STARTTLS, app password) or a relay such as Postfix on this server.</p>
+  <fieldset><legend>Server</legend>
+    <div class="grid3">
+      <label style="grid-column:span 2">Host<input name="host" value="{{$s.Host}}" placeholder="smtp.example.com" autocomplete="off"></label>
+      <label>Port<input name="port" type="number" min="1" max="65535" value="{{$s.Port}}" data-smtp-port></label>
+    </div>
+    <label>Connection
+      <select name="security" data-smtp-security>
+        <option value="starttls" {{if eq $s.Security "starttls"}}selected{{end}}>STARTTLS (usually port 587)</option>
+        <option value="tls" {{if eq $s.Security "tls"}}selected{{end}}>TLS (usually port 465)</option>
+        <option value="none" {{if eq $s.Security "none"}}selected{{end}}>No encryption (local relay, port 25)</option>
+      </select></label>
+    <label class="check"><input type="checkbox" name="insecure" value="1" {{if $s.InsecureSkipVerify}}checked{{end}}> Skip certificate verification <span class="muted small">(test labs only)</span></label>
+  </fieldset>
+  <fieldset><legend>Authentication</legend>
+    <label>Username <span class="muted small">(empty = no authentication)</span><input name="username" value="{{$s.Username}}" autocomplete="off"></label>
+    <label>Password<input name="password" type="password" autocomplete="new-password" placeholder="{{if .Data.HasPassword}}•••••••• (saved, leave empty to keep){{end}}"></label>
+    {{if .Data.HasPassword}}<label class="check small"><input type="checkbox" name="clear_password" value="1"> Remove the saved password</label>{{end}}
+  </fieldset>
+  <fieldset><legend>Sender</legend>
+    <div class="grid3 g2">
+      <label>From address<input name="from_address" type="email" value="{{$s.FromAddress}}" placeholder="monitoriq@example.com"></label>
+      <label>From name<input name="from_name" value="{{$s.FromName}}" placeholder="MonitorIQ"></label>
+    </div>
+  </fieldset>
+</section>
+
+<section class="card">
+  <h2>Alerts</h2>
+  <fieldset><legend>Recipients</legend>
+    <label>Send every alert to <span class="muted small">(comma separated)</span><textarea name="recipients" rows="2" placeholder="ops@example.com, oncall@example.com">{{$s.Recipients}}</textarea></label>
+    <p class="muted small">Users can also ask for alerts under <a href="/account">My account</a>{{if .Data.Subscribers}} ({{len .Data.Subscribers}} did: {{range $i, $a := .Data.Subscribers}}{{if $i}}, {{end}}{{$a}}{{end}}){{end}}. Each monitor can add its own recipients or be muted in its settings.</p>
+  </fieldset>
+  <fieldset><legend>When to send</legend>
+    <label class="check"><input type="checkbox" name="on_down" value="1" {{if $s.OnDown}}checked{{end}}> <span>A monitor goes <strong class="c-down">down</strong></span></label>
+    <label class="check"><input type="checkbox" name="on_recovery" value="1" {{if $s.OnRecovery}}checked{{end}}> <span>A monitor <strong class="c-up">recovers</strong></span></label>
+    <label class="check"><input type="checkbox" name="on_degraded" value="1" {{if $s.OnDegraded}}checked{{end}}> <span>A monitor becomes <strong class="c-degraded">degraded</strong> (slow, partial packet loss, certificate close to expiry) or returns to normal</span></label>
+    <p class="muted small">Changes within 20 seconds are grouped into one message. "Failures before alerting" on each monitor avoids alerts for a single failed check.</p>
+  </fieldset>
+  <fieldset><legend>Certificate digest</legend>
+    <label class="check"><input type="checkbox" name="cert_digest" value="1" {{if $s.CertDigest}}checked{{end}}> Send a daily list of TLS/HTTPS certificates that expire soon</label>
+    <div class="grid3 g2">
+      <label>Expiring within (days)<input name="cert_days" type="number" min="1" max="90" value="{{$s.CertDays}}"></label>
+      <label>At (server time)
+        <select name="digest_hour">{{range .Data.Hours}}<option value="{{.}}" {{if eq . $s.DigestHour}}selected{{end}}>{{printf "%02d:00" .}}</option>{{end}}</select></label>
+    </div>
+  </fieldset>
+  <fieldset><legend>Links</legend>
+    <label>Dashboard URL in messages <span class="muted small">(optional)</span><input name="dashboard_url" value="{{$s.DashboardURL}}" placeholder="{{.Data.BaseURL}}"></label>
+    <p class="muted small">Empty uses <code>MONITORIQ_BASE_URL</code> from the configuration file.</p>
+  </fieldset>
+</section>
+</div>
+
+<div class="grid2 email-bottom">
+<section class="card">
+  <h2>Send a test message</h2>
+  <p class="muted small">Uses the values in this form without saving them.</p>
+  <label>To<input name="test_to" type="email" value="{{.Data.TestTo}}" placeholder="you@example.com"></label>
+  <div class="form-actions"><button class="btn" formaction="/admin/email/test">{{template "icon" "globe-out"}}<span>Send test</span></button></div>
+</section>
+<section class="card">
+  <h2>Recent messages</h2>
+  {{if .Data.Recent}}
+  <div class="table-wrap"><table class="table compact">
+    <thead><tr><th>When</th><th>Subject</th><th>To</th><th>Result</th></tr></thead>
+    <tbody>{{range .Data.Recent}}<tr>
+      <td class="nowrap muted small">{{fmtTime .CreatedAt}}</td>
+      <td class="small">{{.Subject}}</td>
+      <td class="small"><div class="ellipsis" title="{{.Recipients}}">{{.Recipients}}</div></td>
+      <td class="small">{{if .OK}}<span class="badge up">Sent</span>{{else}}<span class="badge down" title="{{.Error}}">Failed</span><div class="muted small ellipsis" title="{{.Error}}">{{.Error}}</div>{{end}}</td>
+    </tr>{{end}}</tbody>
+  </table></div>
+  {{else}}<p class="muted small">No e-mail has been sent yet.</p>{{end}}
+</section>
+</div>
+<div class="form-actions sticky-actions"><button class="btn primary">Save</button></div>
+</form>
+{{template "bottom" .}}
