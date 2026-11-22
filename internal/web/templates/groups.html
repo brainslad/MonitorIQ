@@ -1,0 +1,47 @@
+{{template "top" .}}{{$csrf := .CSRF}}{{$d := .Data}}
+<div class="page-head"><h1>Groups</h1><div class="actions"><a class="btn primary" href="/admin/groups/new">+ New group</a></div></div>
+<p class="muted">A group gathers monitors, for example by service, team, customer or site, across hosts. Each monitor can be in one group.</p>
+{{if $d.Sections}}
+<div class="group-grid">
+  {{range $d.Sections}}
+  <section class="card gcard gc-{{.Color}}">
+    <div class="gcard-head">
+      <span class="gswatch"></span>
+      <h2><a href="/admin/monitors?group={{.ID}}">{{.Title}}</a></h2>
+      <span class="badge {{.Status}}">{{if not .Monitors}}Empty{{else if eq .Status "down"}}Down{{else if eq .Status "degraded"}}Degraded{{else if eq .Status "up"}}Operational{{else}}Unknown{{end}}</span>
+    </div>
+    {{with .Description}}<p class="muted small gcard-desc">{{.}}</p>{{end}}
+    <div class="gcard-nums">
+      <div><strong>{{.Up}}<small>/{{.Active}}</small></strong><span>up</span></div>
+      <div><strong class="{{if .Down}}c-down{{end}}">{{.Down}}</strong><span>down</span></div>
+      <div><strong>{{if ge .Uptime 0.0}}{{pctf .Uptime}}<small>%</small>{{else}}—{{end}}</strong><span>uptime 24h</span></div>
+    </div>
+    {{if .Monitors}}
+    <div class="seg-bar slim" aria-hidden="true">{{if .Up}}<span class="up" style="flex:{{.Up}}"></span>{{end}}{{if .Degraded}}<span class="degraded" style="flex:{{.Degraded}}"></span>{{end}}{{if .Down}}<span class="down" style="flex:{{.Down}}"></span>{{end}}{{with add .Paused (sub .Active (add .Up (add .Down .Degraded)))}}<span class="paused" style="flex:{{.}}"></span>{{end}}</div>
+    <ul class="gcard-list">
+      {{range $i, $m := .Monitors}}{{if lt $i 5}}<li><a href="/monitors/{{$m.ID}}">{{template "dot" $m.DisplayStatus}}<span class="gl-name">{{$m.Name}}</span><small class="muted">{{$m.HostName}}</small></a></li>{{end}}{{end}}
+      {{if gt (len .Monitors) 5}}<li class="muted small more"><a href="/admin/monitors?group={{.ID}}">and {{sub (len .Monitors) 5}} more</a></li>{{end}}
+    </ul>
+    {{else}}<p class="muted small">No monitors yet. <a href="/admin/groups/{{.ID}}/edit">Choose monitors</a>.</p>{{end}}
+    <div class="gcard-actions">
+      <a class="btn small" href="/admin/monitors?group={{.ID}}">Open</a>
+      <a class="btn small" href="/admin/groups/{{.ID}}/edit">Edit</a>
+      <form method="post" action="/admin/groups/{{.ID}}/delete" data-confirm="Delete group {{.Title}}? Its monitors are kept, without a group.">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
+    </div>
+  </section>
+  {{end}}
+  {{with $d.Ungrouped}}
+  <section class="card gcard gc-none">
+    <div class="gcard-head"><span class="gswatch"></span><h2><a href="/admin/monitors?group=none">Not in a group</a></h2></div>
+    <p class="muted small gcard-desc">{{len .Monitors}} {{if eq (len .Monitors) 1}}monitor is{{else}}monitors are{{end}} not in any group yet. Tick them in the <a href="/admin/monitors?group=none">monitor list</a> and move them to a group.</p>
+  </section>
+  {{end}}
+</div>
+{{else}}
+<div class="card empty">
+  <h2>No groups yet</h2>
+  <p class="muted">Create a group, for example "Web shop", "Customer A" or "Lisbon office", and choose the monitors that belong to it.</p>
+  <a class="btn primary" href="/admin/groups/new">+ New group</a>
+</div>
+{{end}}
+{{template "bottom" .}}

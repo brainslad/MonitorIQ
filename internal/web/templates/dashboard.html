@@ -147,6 +147,25 @@
   </div>
 </section>
 
+{{with $d.Groups}}
+<section class="card dash-groups" id="groups">
+  <div class="card-head">
+    <div><h2>Groups</h2><p class="muted small">{{len .}} {{if eq (len .) 1}}group{{else}}groups{{end}} · problems first</p></div>
+    <a class="icon-btn" href="/admin/groups" title="All groups" aria-label="All groups">{{template "icon" "arrow"}}</a>
+  </div>
+  <div class="dg-grid">
+    {{range .}}
+    <a class="dg-tile gc-{{.Color}} st-{{.Status}}" href="/admin/monitors?group={{.ID}}">
+      <span class="dg-name"><span class="gswatch"></span>{{.Title}}</span>
+      <span class="dg-row"><strong>{{.Up}}<small>/{{.Active}}</small></strong><span class="stext {{.Status}}"><span class="dot {{.Status}}"></span>{{if .Down}}{{.Down}} down{{else if .Degraded}}{{.Degraded}} degraded{{else if .Up}}operational{{else}}no data{{end}}</span></span>
+      <span class="seg-bar slim" aria-hidden="true">{{if .Up}}<span class="up" style="flex:{{.Up}}"></span>{{end}}{{if .Degraded}}<span class="degraded" style="flex:{{.Degraded}}"></span>{{end}}{{if .Down}}<span class="down" style="flex:{{.Down}}"></span>{{end}}{{with add .Paused (sub .Active (add .Up (add .Down .Degraded)))}}<span class="paused" style="flex:{{.}}"></span>{{end}}</span>
+      <span class="muted small">{{len .Monitors}} {{if eq (len .Monitors) 1}}monitor{{else}}monitors{{end}}{{if ge .Uptime 0.0}} · {{pctf .Uptime}}% 24h{{end}}</span>
+    </a>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
 {{with $d.Geo}}{{$g := .}}
 <section class="card geo-dash" id="network-map">
   <div class="card-head">
@@ -196,6 +215,11 @@
       <button class="fpill" data-value="up">Up <span>{{$k.Up}}</span></button>
       <button class="fpill" data-value="paused">Paused <span>{{$k.Paused}}</span></button>
     </div>
+    {{with $d.GroupList}}<div class="pills" data-filter-group="group">
+      <button class="fpill active" data-value="all">All groups</button>
+      {{range .}}<button class="fpill" data-value="{{.ID}}">{{.Name}}</button>{{end}}
+      <button class="fpill" data-value="0">No group</button>
+    </div>{{end}}
     <div class="pills" data-filter-group="type">
       <button class="fpill active" data-value="all">All types</button>
       {{range $d.Types}}<button class="fpill" data-value="{{.}}">{{upper .}}</button>{{end}}
@@ -208,9 +232,9 @@
     <tbody>
     {{range $d.Monitors}}
     {{$st := .DisplayStatus}}
-    <tr data-status="{{if .Enabled}}{{statusClass .Status}}{{else}}paused{{end}}" data-type="{{.Type}}" data-text="{{.Name}} {{.HostName}} {{.EffectiveTarget}}">
+    <tr data-status="{{if .Enabled}}{{statusClass .Status}}{{else}}paused{{end}}" data-type="{{.Type}}" data-group="{{.GroupID}}" data-text="{{.Name}} {{.HostName}} {{.EffectiveTarget}} {{.GroupName}}">
       <td class="nowrap">{{if .Enabled}}{{template "stext" .Status}}{{else}}<span class="stext unknown"><span class="dot unknown"></span>Paused</span>{{end}}</td>
-      <td><a class="mon-name" href="/monitors/{{.ID}}">{{.Name}}</a><div class="muted small mono">{{.EffectiveTarget}}{{if .Port}}:{{.Port}}{{end}}</div></td>
+      <td><a class="mon-name" href="/monitors/{{.ID}}">{{.Name}}</a>{{if .GroupID}} <span class="gtag gc-{{.GroupColor}}">{{.GroupName}}</span>{{end}}<div class="muted small mono">{{.EffectiveTarget}}{{if .Port}}:{{.Port}}{{end}}</div></td>
       <td>{{template "tbadge" .Type}}</td>
       <td class="num {{if eq $st 2}}warn{{end}}">{{if and .Enabled (ne .Status 3)}}{{fmtMs .LastLatencyMs}}{{else}}<span class="muted">—</span>{{end}}</td>
       <td class="num {{pctClass $d.Up24 .ID}}">{{pct $d.Up24 .ID}}</td>
