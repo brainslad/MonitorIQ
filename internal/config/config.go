@@ -10,6 +10,7 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,7 +29,36 @@ type Config struct {
 	// (false). When nil, it is decided per request: see web.Server.secureCookie.
 	CookieSecure   *bool
 	MaxConcurrency int
+	// TrustProxy makes MonitorIQ read the client address and protocol from
+	// X-Forwarded-For / X-Forwarded-Proto. With TrustedProxies set, only
+	// requests coming from those addresses are trusted.
 	TrustProxy     bool
+	TrustedProxies []netip.Prefix
+}
+
+// ParseTrustProxy reads MONITORIQ_TRUST_PROXY: true/false, or a list of proxy
+// addresses or networks (comma or space separated) that are trusted.
+func ParseTrustProxy(v string) (bool, []netip.Prefix, error) {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "0", "false", "no", "off":
+		return false, nil, nil
+	case "1", "true", "yes", "on":
+		return true, nil, nil
+	}
+	var out []netip.Prefix
+	for _, f := range strings.FieldsFunc(v, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' }) {
+		if p, err := netip.ParsePrefix(f); err == nil {
+			out = append(out, p.Masked())
+			continue
+		}
+		a, err := netip.ParseAddr(f)
+		if err != nil {
+			return false, nil, fmt.Errorf("invalid MONITORIQ_TRUST_PROXY entry %q: use true, false or a list of IP addresses or networks", f)
+		}
+		a = a.Unmap()
+		out = append(out, netip.PrefixFrom(a, a.BitLen()))
+	}
+	return true, out, nil
 }
 
 // LoadEnvFile reads KEY=VALUE lines into the process environment without
@@ -102,7 +132,10 @@ func Load() (*Config, error) {
 		SecretKey:    env("MONITORIQ_SECRET_KEY", ""),
 		DataDir:      env("MONITORIQ_DATA_DIR", "/var/lib/monitoriq"),
 		CookieSecure: envOptBool("MONITORIQ_COOKIE_SECURE"),
-		TrustProxy:   envBool("MONITORIQ_TRUST_PROXY", false),
+	}
+	var err error
+	if c.TrustProxy, c.TrustedProxies, err = ParseTrustProxy(env("MONITORIQ_TRUST_PROXY", "")); err != nil {
+		return nil, err
 	}
 	n, err := strconv.Atoi(env("MONITORIQ_MAX_CONCURRENCY", "50"))
 	if err != nil || n < 1 {
