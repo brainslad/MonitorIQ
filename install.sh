@@ -12,7 +12,7 @@
 #   --open-firewall       open the web server port in firewalld
 #   --db-url URL          use an existing PostgreSQL database (does not install a local PostgreSQL)
 #   --pg-version N        PostgreSQL version to install (default: 16)
-#   --build               build from source even if a binary is present
+#   --build               kept for compatibility: a source tree is always rebuilt
 #   -h, --help            show this help
 #
 # The script is idempotent: run it again to upgrade MonitorIQ.
@@ -131,25 +131,28 @@ go_ok() {
 }
 
 obtain_binary() {
-  local candidate=""
-  for f in "$SCRIPT_DIR/monitoriq" "$SCRIPT_DIR/bin/monitoriq"; do
-    [[ -x "$f" && -f "$f" ]] && candidate="$f" && break
-  done
-  if [[ -n "$candidate" && $FORCE_BUILD -eq 0 ]]; then
-    BIN_SRC="$candidate"
-    ok "Using bundled binary: $candidate"
+  # A release package ships a ready binary next to this script and no source
+  # code. In a source tree (a git clone) the code is always rebuilt: bin/ only
+  # holds the output of an earlier build, which would reinstall the old
+  # version after a git pull.
+  if [[ ! -f "$SCRIPT_DIR/go.mod" ]]; then
+    [[ -x "$SCRIPT_DIR/monitoriq" && -f "$SCRIPT_DIR/monitoriq" ]] || die "no binary and no source code in $SCRIPT_DIR"
+    [[ $FORCE_BUILD -eq 0 ]] || warn "--build ignored: this is a release package without source code"
+    BIN_SRC="$SCRIPT_DIR/monitoriq"
+    ok "Using bundled binary: $BIN_SRC ($("$BIN_SRC" version 2>/dev/null || echo unknown version))"
     return
   fi
-  [[ -f "$SCRIPT_DIR/go.mod" ]] || die "no binary found and no source code in $SCRIPT_DIR"
   if ! go_ok; then
     info "Installing the Go compiler (golang)"
     dnf -y -q install golang git >/dev/null || true
   fi
   go_ok || die "Go >= 1.${GO_MIN_MINOR} is required. Install it from https://go.dev/dl/ or use a release package with a binary."
-  info "Building MonitorIQ ($(go env GOVERSION))"
+  info "Building MonitorIQ from source ($(go env GOVERSION))"
   local ver
   ver="$(git -C "$SCRIPT_DIR" describe --tags --always --dirty 2>/dev/null || cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo dev)"
-  (cd "$SCRIPT_DIR" && CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags "-s -w -X main.version=${ver}" -o "$SCRIPT_DIR/bin/monitoriq" ./cmd/monitoriq)
+  mkdir -p "$SCRIPT_DIR/bin"
+  (cd "$SCRIPT_DIR" && CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags "-s -w -X main.version=${ver}" -o "$SCRIPT_DIR/bin/monitoriq.new" ./cmd/monitoriq)
+  mv -f "$SCRIPT_DIR/bin/monitoriq.new" "$SCRIPT_DIR/bin/monitoriq"
   BIN_SRC="$SCRIPT_DIR/bin/monitoriq"
   ok "Built: $BIN_SRC ($ver)"
 }
@@ -180,8 +183,16 @@ if ! id monitoriq >/dev/null 2>&1; then
   ok "System user 'monitoriq' created"
 fi
 
+OLD_VER=""
+[[ -x "$BIN_DST" ]] && OLD_VER="$("$BIN_DST" version 2>/dev/null || true)"
+NEW_VER="$("$BIN_SRC" version 2>/dev/null || true)"
 if systemctl is-active -q monitoriq 2>/dev/null; then systemctl stop monitoriq; fi
 install -m 0755 -o root -g root "$BIN_SRC" "$BIN_DST"
+if [[ -n "$OLD_VER" && "$OLD_VER" == "$NEW_VER" ]]; then
+  warn "The installed version is unchanged ($NEW_VER). To upgrade a git clone, run 'git pull' first."
+elif [[ -n "$OLD_VER" ]]; then
+  ok "Upgrading: $OLD_VER → $NEW_VER"
+fi
 command -v restorecon >/dev/null 2>&1 && restorecon -q "$BIN_DST" || true
 ok "Binary installed to $BIN_DST ($("$BIN_DST" version))"
 
