@@ -14,7 +14,15 @@
       </select>
     </label>
   </div>
-  <label>Name<input name="name" required value="{{$m.Name}}" placeholder="Website, Ping, Certificate…"></label>
+  <div class="grid2">
+    <label>Name<input name="name" required value="{{$m.Name}}" placeholder="Website, Ping, Certificate…"></label>
+    <label>Group <span class="muted small">(optional · <a href="/admin/groups/new">new group</a>)</span>
+      <select name="group_id">
+        <option value="0">No group</option>
+        {{range .Data.Groups}}<option value="{{.ID}}" {{if eq64 .ID $m.GroupID}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+    </label>
+  </div>
   <div class="grid2">
     <label>Target <span class="muted small">(empty = host address)</span><input name="target" value="{{$m.Target}}" class="mono" data-target-input></label>
     <label>Port <span class="muted small">(0 = default)</span><input name="port" type="number" min="0" max="65535" value="{{$m.Port}}"></label>

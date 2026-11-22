@@ -114,11 +114,11 @@
   // ---------------------------------------------------------------- dashboard filters
   var filters = document.querySelector("[data-filters]");
   if (filters) {
-    var state = { status: "all", type: "all", q: "" };
+    var state = { status: "all", type: "all", group: "all", q: "" };
     try { var saved = JSON.parse(store.sget("miq-filters") || "{}"); Object.assign(state, saved); } catch (e) { /* ignore */ }
     var urlQ = new URLSearchParams(window.location.search).get("q");
     if (urlQ !== null) {
-      state = { status: "all", type: "all", q: urlQ };
+      state = { status: "all", type: "all", group: "all", q: urlQ };
       var all = document.getElementById("all-monitors");
       if (all && urlQ) setTimeout(function () { all.scrollIntoView({ block: "start" }); }, 0);
     }
@@ -131,6 +131,7 @@
       rows.forEach(function (r) {
         var ok = (state.status === "all" || r.getAttribute("data-status") === state.status) &&
           (state.type === "all" || r.getAttribute("data-type") === state.type) &&
+          (state.group === "all" || r.getAttribute("data-group") === state.group) &&
           (!q || r.getAttribute("data-text").toLowerCase().indexOf(q) >= 0);
         r.hidden = !ok;
         if (ok) shown++;
@@ -156,6 +157,91 @@
     }
     apply();
   }
+
+  // A saved group filter may point to a group that no longer exists.
+  if (filters && !filters.querySelector('[data-filter-group="group"] [data-value="' + state.group + '"]') && state.group !== "all") {
+    state.group = "all"; apply();
+  }
+
+  // ---------------------------------------------------------------- monitor list: select and move to a group
+  var bulk = document.querySelector("[data-bulk]");
+  if (bulk) {
+    var bar = document.querySelector("[data-bulk-bar]");
+    var boxes = document.querySelectorAll('input[name="monitor"][form="bulk"]');
+    var count = bar.querySelector("[data-bulk-count]");
+    var target = bar.querySelector("[data-bulk-target]");
+    var newName = bar.querySelector("[data-bulk-new]");
+    var go = bar.querySelector("[data-bulk-go]");
+    var refresh = function () {
+      var n = 0;
+      boxes.forEach(function (b) { if (b.checked) n++; b.closest("tr").classList.toggle("picked", b.checked); });
+      bar.hidden = n === 0;
+      document.body.classList.toggle("has-bulk", n > 0);
+      count.textContent = n + " selected";
+      newName.hidden = target.value !== "new";
+      newName.required = target.value === "new";
+      go.disabled = !target.value || (target.value === "new" && !newName.value.trim());
+      document.querySelectorAll("[data-section]").forEach(function (sec) {
+        var all = sec.querySelector("[data-select-all]");
+        var own = sec.querySelectorAll('input[name="monitor"]');
+        if (!all) return;
+        var on = 0;
+        own.forEach(function (b) { if (b.checked) on++; });
+        all.checked = own.length > 0 && on === own.length;
+        all.indeterminate = on > 0 && on < own.length;
+        all.disabled = own.length === 0;
+      });
+    };
+    document.querySelectorAll("[data-section] [data-select-all]").forEach(function (all) {
+      all.addEventListener("change", function () {
+        all.closest("[data-section]").querySelectorAll('input[name="monitor"]').forEach(function (b) { b.checked = all.checked; });
+        refresh();
+      });
+    });
+    boxes.forEach(function (b) { b.addEventListener("change", refresh); });
+    target.addEventListener("change", function () { refresh(); if (target.value === "new") newName.focus(); });
+    newName.addEventListener("input", refresh);
+    bar.querySelector("[data-bulk-clear]").addEventListener("click", function () {
+      boxes.forEach(function (b) { b.checked = false; });
+      refresh();
+    });
+    refresh();
+  }
+
+  // ---------------------------------------------------------------- group form: pick monitors
+  var pick = document.querySelector("[data-pick-table]");
+  if (pick) {
+    var pickAll = pick.querySelector("[data-select-all]");
+    var pickRows = pick.querySelectorAll("tbody tr");
+    var pickSync = function () {
+      var vis = 0, on = 0;
+      pickRows.forEach(function (r) { if (!r.hidden) { vis++; if (r.querySelector("input").checked) on++; } });
+      pickAll.checked = vis > 0 && on === vis;
+      pickAll.indeterminate = on > 0 && on < vis;
+    };
+    pickAll.addEventListener("change", function () {
+      pickRows.forEach(function (r) { if (!r.hidden) r.querySelector("input").checked = pickAll.checked; });
+    });
+    pick.addEventListener("change", pickSync);
+    var pf = document.querySelector("[data-pick-filter]");
+    if (pf) pf.addEventListener("input", function () {
+      var q = pf.value.toLowerCase();
+      pickRows.forEach(function (r) { r.hidden = q && r.getAttribute("data-text").toLowerCase().indexOf(q) < 0; });
+      pickSync();
+    });
+    pickSync();
+  }
+
+  // ---------------------------------------------------------------- status page form: tick a whole group
+  document.querySelectorAll("[data-pick-group]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var rows = document.querySelectorAll('tr[data-group="' + b.getAttribute("data-pick-group") + '"] input[name="monitor"]');
+      var all = true;
+      rows.forEach(function (c) { if (!c.checked) all = false; });
+      rows.forEach(function (c) { c.checked = !all; });
+      b.classList.toggle("active", !all);
+    });
+  });
 
   // ---------------------------------------------------------------- auto refresh (dashboard)
   if (document.getElementById("dash-chart")) {

@@ -12,13 +12,14 @@
   <fieldset><legend>Monitors to show</legend>
   {{if .Data.Options}}
   <p class="muted small">Tick the monitors to include. You can set a public name and the order (lower numbers come first).</p>
+  {{with .Data.Groups}}<div class="pick-groups small"><span class="muted">Tick a whole group:</span>{{range .}}{{if .Monitors}}<button type="button" class="gchip gc-{{.Color}}" data-pick-group="{{.ID}}"><i class="gdot dot-{{.Status}}"></i>{{.Name}} <span>{{.Monitors}}</span></button>{{end}}{{end}}</div>{{end}}
   <div class="table-wrap"><table class="table compact">
     <thead><tr><th></th><th>Monitor</th><th>Public name</th><th class="num">Order</th></tr></thead>
     <tbody>
     {{range $i, $o := .Data.Options}}
-    <tr>
+    <tr data-group="{{$o.M.GroupID}}">
       <td><input type="checkbox" name="monitor" value="{{$o.M.ID}}" {{if $o.Selected}}checked{{end}} aria-label="Include {{$o.M.Name}}"></td>
-      <td>{{$o.M.HostName}} · <strong>{{$o.M.Name}}</strong> {{template "tbadge" $o.M.Type}}</td>
+      <td>{{$o.M.HostName}} · <strong>{{$o.M.Name}}</strong> {{template "tbadge" $o.M.Type}}{{if $o.M.GroupID}} <span class="gtag gc-{{$o.M.GroupColor}}">{{$o.M.GroupName}}</span>{{end}}</td>
       <td><input name="name_{{$o.M.ID}}" value="{{$o.DisplayName}}" placeholder="{{$o.M.Name}}"></td>
       <td class="num"><input class="narrow" name="pos_{{$o.M.ID}}" type="number" value="{{add $i 1}}"></td>
     </tr>

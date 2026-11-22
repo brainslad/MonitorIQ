@@ -58,6 +58,7 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 - **Sidebar navigation** grouped into Monitoring, Administration and Account, with live counts, a collapsible layout and a quick search (press `/`).
 - **Dark and light mode**: follows the operating system by default and can be toggled from the top bar (the choice is remembered in the browser). The light theme uses graphite and steel-blue tones with frosted-glass cards.
 - **Network map and IP information**: a world map on the dashboard shows where every monitor points, seen from the monitoring system, and each monitor page shows the path from this server to its target (with traceroute hops) next to the public IP, reverse DNS, network operator (ASN), city, country and coordinates of both ends, the distance and the light-speed minimum round-trip time. Lookups use a local database (free DB-IP Lite or MaxMind GeoLite2), so addresses never leave the server.
+- **Monitor groups**: gather monitors by service, team, customer or site, across hosts. Each group has a colour and a description; the *Groups* page shows how many monitors are up and the 24-hour uptime of each group, the monitor list can be arranged by group or by host and filtered on one group, several monitors can be moved to a group at once, and the dashboard shows a card per group (problems first) and a group filter on the monitor table. Status page editors can tick a whole group at once.
 - **Monitor page** with 24h/7d/30d/1-year uptime, a latency and availability chart from 1 hour to 2 years, last-check details (certificate, DNS answers, traceroute hops…), events and history.
 - **Back-office** to manage hosts, monitors (interval, timeout, failures before alerting, pause), status pages, users and retention.
 - **Public status pages** (`/status/<name>`) with overall status, 90-day availability bars, incidents from the last 14 days, custom public names and a JSON API (`/api/status/<name>`). They can be embedded in another site with an `<iframe>`.
@@ -109,6 +110,8 @@ A page to share with customers at `/status/<name>`: overall status, 90 days of d
 | Hosts | Monitors |
 |---|---|
 | ![Hosts](docs/screenshots/hosts.png) | ![Monitors](docs/screenshots/monitors.png) |
+| **Groups:** status and 24-hour uptime per group | **Moving monitors:** tick monitors and move them to a group, or to a new one |
+| ![Groups](docs/screenshots/groups.png) | ![Moving monitors to a group](docs/screenshots/groups-move.png) |
 | **Monitor editor:** type, target, interval, timeout, failures before alerting and type-specific options | **Status page editor:** pick monitors, public names and order |
 | ![Monitor editor](docs/screenshots/monitor-form.png) | ![Status page editor](docs/screenshots/status-page-form.png) |
 | **Users:** sign-in source and 2FA state, reset 2FA | **Settings → Data retention:** 1 to 730 days per data type |
@@ -193,9 +196,10 @@ Installer options:
 
 1. Open `http://<server>:8080` and sign in as `admin`.
 2. **Hosts → New host**: enter a name and the address (hostname or IP).
-3. Add **monitors** to that host. *Target* is optional: when empty the host address is used (for HTTP, `https://<address>`). *Port* 0 uses the type's default (443 for TLS, 25 for SMTP, 53 for DNS).
-4. **Failures before alerting**: with 1, a monitor only turns *Down* after 2 consecutive failures, avoiding false alarms.
-5. **Status pages → New**: pick the monitors, their public names and order. The page is served at `/status/<address>`.
+3. Optionally, **Groups → New group** to gather monitors (for example "Web shop" or "Customer A") and tick the monitors that belong to it. A monitor can also be given a group in its editor, or several can be moved at once from the monitor list.
+4. Add **monitors** to that host. *Target* is optional: when empty the host address is used (for HTTP, `https://<address>`). *Port* 0 uses the type's default (443 for TLS, 25 for SMTP, 53 for DNS).
+5. **Failures before alerting**: with 1, a monitor only turns *Down* after 2 consecutive failures, avoiding false alarms.
+6. **Status pages → New**: pick the monitors, their public names and order. The page is served at `/status/<address>`.
 
 ### Statuses
 

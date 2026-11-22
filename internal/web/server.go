@@ -146,6 +146,14 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/monitors/{id}/edit", s.handleMonitorSave)
 	auth("POST /admin/monitors/{id}/delete", s.handleMonitorDelete)
 	auth("POST /admin/monitors/{id}/toggle", s.handleMonitorToggle)
+	auth("POST /admin/monitors/move", s.handleMonitorsMove)
+
+	auth("GET /admin/groups", s.handleGroups)
+	auth("GET /admin/groups/new", s.handleGroupForm)
+	auth("POST /admin/groups/new", s.handleGroupSave)
+	auth("GET /admin/groups/{id}/edit", s.handleGroupForm)
+	auth("POST /admin/groups/{id}/edit", s.handleGroupSave)
+	auth("POST /admin/groups/{id}/delete", s.handleGroupDelete)
 
 	auth("GET /admin/status-pages", s.handleStatusPages)
 	auth("GET /admin/status-pages/new", s.handleStatusPageForm)

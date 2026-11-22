@@ -2,9 +2,9 @@
 {{$m := .Data.M}}{{$u := .Data.Uptimes}}{{$csrf := .CSRF}}
 <div class="page-head">
   <div>
-    <div class="crumbs-old muted"><a href="/">Dashboard</a> / {{$m.HostName}}</div>
+    <div class="crumbs-old muted"><a href="/">Dashboard</a> / {{if $m.GroupID}}<a href="/admin/monitors?group={{$m.GroupID}}">{{$m.GroupName}}</a> / {{end}}{{$m.HostName}}</div>
     <h1>{{template "dot" $m.DisplayStatus}} {{$m.Name}}</h1>
-    <div class="muted">{{template "tbadge" $m.Type}} {{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · every {{$m.IntervalSeconds}}s</div>
+    <div class="muted">{{if $m.GroupID}}<a class="gtag gc-{{$m.GroupColor}}" href="/admin/monitors?group={{$m.GroupID}}">{{$m.GroupName}}</a> {{end}}{{template "tbadge" $m.Type}} {{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · every {{$m.IntervalSeconds}}s</div>
   </div>
   <div class="actions">
     <form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Check now</button></form>

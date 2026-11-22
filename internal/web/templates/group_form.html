@@ -1,0 +1,33 @@
+{{template "top" .}}{{$g := .Data.G}}{{$picked := .Data.Picked}}
+<div class="page-head"><h1>{{if $g.ID}}Edit group{{else}}New group{{end}}</h1></div>
+<form class="card form" method="post">
+  {{template "csrf" .CSRF}}
+  <label>Name<input name="name" required maxlength="80" value="{{$g.Name}}" placeholder="Web shop, Customer A, Lisbon office…" autofocus></label>
+  <label>Description <span class="muted small">(optional)</span><textarea name="description" rows="2" maxlength="500">{{$g.Description}}</textarea></label>
+  <fieldset><legend>Colour</legend>
+    <div class="swatches">
+      {{range .Data.Colors}}<label class="swatch gc-{{.}}" title="{{.}}"><input type="radio" name="color" value="{{.}}" {{if eq . $g.Color}}checked{{end}}><span class="gswatch"></span><span class="sr-only">{{.}}</span></label>{{end}}
+    </div>
+  </fieldset>
+  <fieldset><legend>Monitors in this group</legend>
+  {{if .Data.Monitors}}
+    <p class="muted small">A monitor is in one group at a time: ticking a monitor that is in another group moves it here.</p>
+    <input class="search" type="search" placeholder="Filter by name, host or target…" data-pick-filter aria-label="Filter monitors">
+    <div class="table-wrap pick-wrap"><table class="table compact" data-pick-table>
+      <thead><tr><th class="cb"><input type="checkbox" data-select-all aria-label="Select all"></th><th>Monitor</th><th class="hide-sm">Host</th><th>Now in</th></tr></thead>
+      <tbody>
+      {{range .Data.Monitors}}
+      <tr data-text="{{.Name}} {{.HostName}} {{.EffectiveTarget}} {{.GroupName}}">
+        <td class="cb"><input type="checkbox" name="monitor" value="{{.ID}}" {{if $picked}}{{if has $picked .ID}}checked{{end}}{{else if and $g.ID (eq64 .GroupID $g.ID)}}checked{{end}} aria-label="Include {{.Name}}"></td>
+        <td>{{template "dot" .DisplayStatus}} <strong>{{.Name}}</strong> {{template "tbadge" .Type}}</td>
+        <td class="muted hide-sm">{{.HostName}}</td>
+        <td>{{if .GroupID}}<span class="gtag gc-{{.GroupColor}}">{{.GroupName}}</span>{{else}}<span class="muted small">—</span>{{end}}</td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table></div>
+  {{else}}<p class="muted">There are no monitors yet. You can add them to this group later.</p>{{end}}
+  </fieldset>
+  <div class="form-actions"><a class="btn ghost" href="/admin/groups">Cancel</a><button class="btn primary" type="submit">Save</button></div>
+</form>
+{{template "bottom" .}}

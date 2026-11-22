@@ -16,6 +16,7 @@ type NavCounts struct {
 	Monitors    int
 	Down        int
 	Hosts       int
+	Groups      int
 	StatusPages int
 	Users       int
 }
@@ -26,8 +27,9 @@ func (s *Store) NavCounts(ctx context.Context) (NavCounts, error) {
 		(SELECT count(*) FROM monitors),
 		(SELECT count(*) FROM monitors WHERE enabled AND status = 3),
 		(SELECT count(*) FROM hosts),
+		(SELECT count(*) FROM monitor_groups),
 		(SELECT count(*) FROM status_pages),
-		(SELECT count(*) FROM users)`).Scan(&n.Monitors, &n.Down, &n.Hosts, &n.StatusPages, &n.Users)
+		(SELECT count(*) FROM users)`).Scan(&n.Monitors, &n.Down, &n.Hosts, &n.Groups, &n.StatusPages, &n.Users)
 	return n, err
 }
 
