@@ -9,6 +9,7 @@
   <div class="actions">
     <form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Check now</button></form>
     <form method="post" action="/admin/monitors/{{$m.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/monitors/{{$m.ID}}"><button class="btn">{{if $m.Enabled}}Pause{{else}}Resume{{end}}</button></form>
+    <a class="btn" href="/export?monitor={{$m.ID}}" title="Export this monitor's data to Excel">{{template "icon" "download"}} Export</a>
     <a class="btn primary" href="/admin/monitors/{{$m.ID}}/edit">Edit</a>
   </div>
 </div>

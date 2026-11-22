@@ -1,0 +1,62 @@
+{{template "top" .}}{{$f := .Data.F}}{{$r := .Data.Retention}}
+<div class="page-head"><h1>Export to Excel</h1></div>
+<p class="muted">Download the monitoring data of a period as an Excel workbook (.xlsx), which also opens in LibreOffice and Google Sheets. Dates and times are in the server's time zone ({{.Data.Zone}}).</p>
+<form class="card form export-form" method="get" action="/export/download">
+  <input type="hidden" name="go" value="1">
+  <fieldset><legend>Period</legend>
+    <div class="grid2">
+      <label>From<input type="date" name="from" value="{{$f.From}}" max="{{.Data.Today}}" required data-export-from></label>
+      <label>To (inclusive)<input type="date" name="to" value="{{$f.To}}" max="{{.Data.Today}}" required data-export-to></label>
+    </div>
+    <div class="export-presets" role="group" aria-label="Quick periods">
+      <button type="button" class="btn small" data-export-preset="today">Today</button>
+      <button type="button" class="btn small" data-export-preset="yesterday">Yesterday</button>
+      <button type="button" class="btn small" data-export-preset="7">Last 7 days</button>
+      <button type="button" class="btn small" data-export-preset="30">Last 30 days</button>
+      <button type="button" class="btn small" data-export-preset="90">Last 90 days</button>
+      <button type="button" class="btn small" data-export-preset="month">This month</button>
+      <button type="button" class="btn small" data-export-preset="lastmonth">Last month</button>
+      <button type="button" class="btn small" data-export-preset="year">This year</button>
+      <button type="button" class="btn small" data-export-preset="lastyear">Last year</button>
+    </div>
+    <p class="muted small">History is kept for {{$r.AggregateDays}} days (hourly figures) and {{$r.EventsDays}} days (incidents); single checks are kept for {{$r.RawDays}} days{{if .Data.OldestResult}}, the oldest is from {{fmtTime .Data.OldestResult}}{{end}}. Change this under <a href="/admin/settings">Settings</a>.</p>
+  </fieldset>
+
+  <fieldset><legend>Monitors</legend>
+    <label>Group
+      <select name="group">
+        <option value="">All monitors</option>
+        {{range .Data.Groups}}<option value="{{.ID}}" {{if eq64 .ID $f.GroupID}}selected{{end}}>{{.Name}} ({{.Monitors}})</option>{{end}}
+      </select>
+    </label>
+    {{if .Data.Monitors}}
+    <details class="export-pick"{{if $f.Monitors}} open{{end}}>
+      <summary>Choose individual monitors <span class="muted small">(overrides the group)</span></summary>
+      <input class="search" type="search" placeholder="Filter by name, host or target…" data-pick-filter aria-label="Filter monitors">
+      <div class="table-wrap pick-wrap"><table class="table compact" data-pick-table>
+        <thead><tr><th class="cb"><input type="checkbox" data-select-all aria-label="Select all"></th><th>Monitor</th><th class="hide-sm">Host</th><th>Group</th></tr></thead>
+        <tbody>
+        {{range .Data.Monitors}}
+        <tr data-text="{{.Name}} {{.HostName}} {{.EffectiveTarget}} {{.GroupName}}">
+          <td class="cb"><input type="checkbox" name="monitor" value="{{.ID}}" {{if contains $f.Monitors .ID}}checked{{end}} aria-label="Include {{.Name}}"></td>
+          <td>{{template "dot" .DisplayStatus}} <strong>{{.Name}}</strong> {{template "tbadge" .Type}}</td>
+          <td class="muted hide-sm">{{.HostName}}</td>
+          <td>{{if .GroupID}}<span class="gtag gc-{{.GroupColor}}">{{.GroupName}}</span>{{else}}<span class="muted small">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table></div>
+    </details>
+    {{else}}<p class="muted">There are no monitors yet.</p>{{end}}
+  </fieldset>
+
+  <fieldset><legend>Sheets</legend>
+    <label class="check"><input type="checkbox" checked disabled> <span><strong>Summary</strong> <span class="muted small">— per monitor: checks, uptime %, average/min/max response time, incidents and downtime (always included)</span></span></label>
+    <label class="check"><input type="checkbox" name="daily" value="1" {{if $f.Daily}}checked{{end}}> <span><strong>Daily</strong> <span class="muted small">— one row per monitor and day</span></span></label>
+    <label class="check"><input type="checkbox" name="hourly" value="1" {{if $f.Hourly}}checked{{end}}> <span><strong>Hourly</strong> <span class="muted small">— one row per monitor and hour</span></span></label>
+    <label class="check"><input type="checkbox" name="incidents" value="1" {{if $f.Incidents}}checked{{end}}> <span><strong>Incidents</strong> <span class="muted small">— when each monitor was degraded or down, and for how long</span></span></label>
+    <label class="check"><input type="checkbox" name="checks" value="1" {{if $f.Checks}}checked{{end}}> <span><strong>Every check</strong> <span class="muted small">— each single check with its status, response time and message (last {{$r.RawDays}} days only; large: up to {{thousands .Data.MaxChecks}} rows)</span></span></label>
+  </fieldset>
+  <div class="form-actions"><a class="btn ghost" href="/">Cancel</a><button class="btn primary" type="submit" data-export-submit>{{template "icon" "download"}} Download .xlsx</button></div>
+</form>
+{{template "bottom" .}}

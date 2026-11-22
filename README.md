@@ -60,6 +60,7 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 - **Network map and IP information**: a world map on the dashboard shows where every monitor points, seen from the monitoring system, and each monitor page shows the path from this server to its target (with traceroute hops) next to the public IP, reverse DNS, network operator (ASN), city, country and coordinates of both ends, the distance and the light-speed minimum round-trip time. Lookups use a local database (free DB-IP Lite or MaxMind GeoLite2), so addresses never leave the server.
 - **Monitor groups**: gather monitors by service, team, customer or site, across hosts. Each group has a colour and a description; the *Groups* page shows how many monitors are up and the 24-hour uptime of each group, the monitor list can be arranged by group or by host and filtered on one group, several monitors can be moved to a group at once, and the dashboard shows a card per group (problems first) and a group filter on the monitor table. Status page editors can tick a whole group at once.
 - **Monitor page** with 24h/7d/30d/1-year uptime, a latency and availability chart from 1 hour to 2 years, last-check details (certificate, DNS answers, traceroute hops…), events and history.
+- **Export to Excel**: download the monitoring data of any period as an `.xlsx` workbook (also opens in LibreOffice and Google Sheets), for all monitors, one group or monitors you pick. It holds a summary per monitor (checks, uptime %, average/min/max response time, incidents, downtime) and, as you choose, daily and hourly figures, the list of incidents with their duration and every single check.
 - **Back-office** to manage hosts, monitors (interval, timeout, failures before alerting, pause), status pages, users and retention.
 - **Public status pages** (`/status/<name>`) with overall status, 90-day availability bars, incidents from the last 14 days, custom public names and a JSON API (`/api/status/<name>`). They can be embedded in another site with an `<iframe>`.
 - **Retention** configurable per data type, with a hard limit of 730 days:
@@ -278,6 +279,17 @@ Open **Settings → Email**, enter your SMTP server and sender address, tick *Se
 3. **Location of this server:** taken from the database for its public address. Behind NAT, a VPN or a proxy, set the latitude and longitude by hand.
 
 Lookups of targets happen locally: names are resolved with the server's DNS (results cached for 10 minutes), and the database is read from disk. Only the optional public-IP detection and the database download make outbound requests. Maps credit the database as its licence requires.
+
+### Export to Excel
+
+Open **Export** in the sidebar (or **Export** on a monitor's page, which picks that monitor):
+
+1. **Period:** pick the first and last day (both included), or a quick period such as *Last 30 days*, *Last month* or *This year*. Days and times follow the server's time zone.
+2. **Monitors:** all monitors, one group, or monitors ticked one by one (ticked monitors win over the group).
+3. **Sheets:** *Summary* is always there. *Daily* and *Incidents* are ticked by default; *Hourly* and *Every check* are optional.
+4. Press **Download .xlsx**. The file is named after the period, e.g. `monitoriq-2026-11-01_2026-11-30.xlsx`.
+
+Summary, daily and hourly figures come from the hourly aggregates, so they reach back as far as that retention (730 days by default). *Every check* reads the raw results, which are kept for less time (90 days by default); one export holds at most 3,000,000 checks and moves to a new sheet every 1,048,575 rows, Excel's limit. Uptime is `(up + degraded) / checks`, the same as on the dashboard; downtime is the time a monitor spent *down* within the period. Dates are real Excel dates and figures are numbers, so the sheets can be sorted, filtered and charted straight away. Two exports run at a time at most.
 
 ### Command line
 
