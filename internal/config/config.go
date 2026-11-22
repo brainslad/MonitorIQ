@@ -23,8 +23,10 @@ type Config struct {
 	SecretKey   string
 	DataDir     string
 	// GeoIPDir holds the geolocation databases (city.mmdb, asn.mmdb).
-	GeoIPDir       string
-	CookieSecure   bool
+	GeoIPDir string
+	// CookieSecure forces the Secure flag on cookies (true) or turns it off
+	// (false). When nil, it is decided per request: see web.Server.secureCookie.
+	CookieSecure   *bool
 	MaxConcurrency int
 	TrustProxy     bool
 }
@@ -77,6 +79,20 @@ func envBool(key string, def bool) bool {
 	return def
 }
 
+// envOptBool reads a boolean that may also be left unset or set to "auto"
+// (nil).
+func envOptBool(key string) *bool {
+	switch strings.ToLower(env(key, "")) {
+	case "1", "true", "yes", "on":
+		t := true
+		return &t
+	case "0", "false", "no", "off":
+		f := false
+		return &f
+	}
+	return nil
+}
+
 // Load builds the configuration from the environment.
 func Load() (*Config, error) {
 	c := &Config{
@@ -85,7 +101,7 @@ func Load() (*Config, error) {
 		BaseURL:      strings.TrimRight(env("MONITORIQ_BASE_URL", ""), "/"),
 		SecretKey:    env("MONITORIQ_SECRET_KEY", ""),
 		DataDir:      env("MONITORIQ_DATA_DIR", "/var/lib/monitoriq"),
-		CookieSecure: envBool("MONITORIQ_COOKIE_SECURE", strings.HasPrefix(env("MONITORIQ_BASE_URL", ""), "https://")),
+		CookieSecure: envOptBool("MONITORIQ_COOKIE_SECURE"),
 		TrustProxy:   envBool("MONITORIQ_TRUST_PROXY", false),
 	}
 	n, err := strconv.Atoi(env("MONITORIQ_MAX_CONCURRENCY", "50"))
