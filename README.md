@@ -1,13 +1,43 @@
-# MonitorIQ
+<h1 align="center">MonitorIQ</h1>
 
-**Know before your users do.**
+<p align="center"><strong>Know before your users do.</strong></p>
 
-Self-hosted uptime and service monitoring for **Rocky Linux 8, 9 and 10**.
-A single Go binary with a dashboard, an admin back-office and public status pages, storing its data in **PostgreSQL** with configurable retention of up to **2 years**.
+<p align="center">
+Self-hosted uptime and service monitoring for Rocky Linux 8, 9 and 10.<br>
+One Go binary · PostgreSQL · dashboard, back-office and public status pages · up to 2 years of history.
+</p>
 
-| Dark mode | Light mode |
-|---|---|
-| ![Dashboard, dark](docs/screenshots/dashboard.png) | ![Dashboard, light](docs/screenshots/dashboard-light.png) |
+<p align="center">
+  <a href="#quick-install-rocky-linux-8--9--10">Install</a> ·
+  <a href="#screens">Screens</a> ·
+  <a href="#authentication">Authentication</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="LICENSE">GPL-3.0</a>
+</p>
+
+![MonitorIQ dashboard](docs/screenshots/dashboard.png)
+
+## Overview
+
+MonitorIQ watches your websites and network services and tells you, on one screen, what is up, what is slow and what is down. It is built for small and medium teams that want their own monitoring on their own server, without a SaaS subscription or a stack of containers.
+
+- **What it checks:** websites (HTTP/HTTPS), ping, traceroute, DNS records, SMTP servers, TLS certificate expiry and any TCP port.
+- **Where you see it:** a live dashboard with KPIs, charts and incident history, a page per monitor with charts from 1 hour to 2 years, and public status pages you can share with customers or embed in your site.
+- **How you run it:** one installer sets up PostgreSQL, a hardened systemd service and the firewall. Upgrades are one command, and data retention is capped at 2 years.
+- **Who gets in:** local accounts, LDAP / Active Directory or single sign-on (Microsoft Entra ID / Azure AD, Google, Okta, Keycloak…), with optional mandatory two-factor authentication.
+
+### How it works
+
+```
+             ┌──────────────── monitoriq (single binary) ────────────────┐
+ browsers ──▶│ web server: dashboard · back-office · status pages · API  │
+             │ scheduler: runs due checks concurrently (http, ping, …)   │──▶ your hosts and services
+             │ maintenance: hourly retention cleanup                     │
+             └───────────────────────────────┬───────────────────────────┘
+                                             ▼
+                               PostgreSQL: results, hourly
+                               aggregates, incidents, users
+```
 
 ## Features
 
@@ -34,10 +64,61 @@ A single Go binary with a dashboard, an admin back-office and public status page
 - **Sign-in options**: local accounts, **LDAP / Active Directory** (with group restriction) and **single sign-on** through OpenID Connect: **Microsoft Entra ID (Azure AD)**, Google Workspace, Okta, Keycloak, Authentik, AD FS…
 - **Two-factor authentication** with any authenticator app (TOTP, QR code), 10 single-use recovery codes, and an option to make it mandatory.
 - **Security**: bcrypt passwords, server-side sessions, CSRF protection, login and 2FA rate limiting, AES-256-GCM encryption of stored secrets, CSP headers, a hardened systemd unit and an unprivileged service user.
+- **Responsive**: every screen works on a phone.
 
-| Monitor | Public status page |
+## Screens
+
+### Dashboard
+
+Everything at a glance: monitors by status, 24-hour and 30-day uptime, response time, open incidents, a response-time chart and a filterable table with hour-by-hour availability bars. It refreshes every minute.
+
+| Dark mode | Light mode |
 |---|---|
-| ![Monitor](docs/screenshots/monitor.png) | ![Status page](docs/screenshots/status.png) |
+| ![Dashboard, dark](docs/screenshots/dashboard.png) | ![Dashboard, light](docs/screenshots/dashboard-light.png) |
+
+### Monitor details
+
+Uptime for 24 hours, 7 days, 30 days and 1 year, a latency and availability chart from 1 hour to 2 years, the details of the last check (certificate, DNS answers, traceroute hops…), status changes and recent results.
+
+![Monitor details](docs/screenshots/monitor.png)
+
+### Public status pages
+
+A page to share with customers at `/status/<name>`: overall status, 90 days of daily availability, and incidents from the last 14 days. Also available as JSON and embeddable with an `<iframe>`.
+
+| Light | Dark |
+|---|---|
+| ![Status page, light](docs/screenshots/status.png) | ![Status page, dark](docs/screenshots/status-dark.png) |
+
+### Back-office
+
+| Hosts | Monitors |
+|---|---|
+| ![Hosts](docs/screenshots/hosts.png) | ![Monitors](docs/screenshots/monitors.png) |
+| **Monitor editor:** type, target, interval, timeout, failures before alerting and type-specific options | **Status page editor:** pick monitors, public names and order |
+| ![Monitor editor](docs/screenshots/monitor-form.png) | ![Status page editor](docs/screenshots/status-page-form.png) |
+| **Users:** sign-in source and 2FA state, reset 2FA | **Settings → Data retention:** 1 to 730 days per data type |
+| ![Users](docs/screenshots/users.png) | ![Retention settings](docs/screenshots/settings.png) |
+
+### Sign-in and security
+
+| Sign-in with SSO | Two-factor code |
+|---|---|
+| ![Sign-in](docs/screenshots/login.png) | ![Two-factor code](docs/screenshots/2fa-login.png) |
+| **Mandatory 2FA set-up** | **My account** |
+| ![2FA set-up](docs/screenshots/2fa-setup.png) | ![My account](docs/screenshots/account.png) |
+
+**Settings → Authentication:** two-factor policy, LDAP / Active Directory and OpenID Connect single sign-on.
+
+![Authentication settings](docs/screenshots/auth-settings.png)
+
+### On a phone
+
+<p>
+  <img src="docs/screenshots/mobile.png" alt="Dashboard on a phone" width="300">
+  &nbsp;
+  <img src="docs/screenshots/mobile-status.png" alt="Status page on a phone" width="300">
+</p>
 
 ## Quick install (Rocky Linux 8 / 9 / 10)
 
@@ -115,10 +196,6 @@ After 10 failed attempts (password or 2FA code) an IP is blocked for 15 minutes.
 
 Everything below is configured under **Settings → Authentication**; secrets (LDAP bind password, OIDC client secret, TOTP keys) are stored encrypted with `MONITORIQ_SECRET_KEY`.
 
-| Users page | Authentication settings |
-|---|---|
-| ![Users](docs/screenshots/users.png) | ![Authentication settings](docs/screenshots/auth-settings.png) |
-
 #### Two-factor authentication (2FA)
 
 - Each user turns it on under **My account** (click your username): scan the QR code with Microsoft Authenticator, Google Authenticator, 1Password, Bitwarden, Authy…, type the code and save the 10 **recovery codes** (each works once).
@@ -129,10 +206,6 @@ Everything below is configured under **Settings → Authentication**; secrets (L
 ```bash
 sudo -u monitoriq monitoriq --env /etc/monitoriq/monitoriq.env user reset-2fa jdoe
 ```
-
-| Set-up (mandatory 2FA) | Sign-in code |
-|---|---|
-| ![2FA set-up](docs/screenshots/2fa-setup.png) | ![2FA sign-in](docs/screenshots/2fa-login.png) |
 
 #### LDAP / Active Directory
 
