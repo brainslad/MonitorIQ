@@ -1,10 +1,38 @@
 MonitorIQ — uptime and service monitoring. Know before your users do.
-Copyright (C) 2026 MonitorIQ contributors
+Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+Author and maintainer: Brainslad
+Project home: https://github.com/brainslad/MonitorIQ
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version. See the LICENSE file.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+Additional term under section 7(b) of the GNU GPL version 3
+------------------------------------------------------------
+As permitted by section 7(b) of the GNU General Public License version 3, the
+following author attribution must be preserved in this program and in any
+modified version or work based on it:
+
+  1. The notice "MonitorIQ by Brainslad", with a link to
+     https://github.com/brainslad/MonitorIQ, in the footer of the web
+     interface, the sign-in pages and the public status pages (the
+     "Appropriate Legal Notices" of the web interface). It must stay visible
+     and legible; it may be restyled, translated or moved to an equivalent
+     place such as an "About" screen reachable from every page.
+  2. The copyright notice and this NOTICE file, in source and binary
+     distributions, together with the copyright and SPDX headers of the
+     source files.
+  3. A credit to Brainslad as the original author in the documentation
+     (for example the README) of any modified version.
+
+A modified version must not claim to be the original MonitorIQ and should be
+marked as changed, as section 5(a) of the license requires. Further
+restrictions beyond these terms are not allowed (section 10).
 
 Third-party components bundled in internal/web/static/:
 - Chart.js v4.4.1, (c) 2023 Chart.js Contributors, MIT License.

@@ -1,3 +1,6 @@
+/* Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Part of MonitorIQ; see LICENSE and NOTICE (author attribution must be kept). */
 /* MonitorIQ — light and dark themes */
 @font-face{font-family:"Inter";font-weight:100 900;font-style:normal;font-display:swap;src:url(fonts/inter-latin-wght-normal.woff2) format("woff2")}
 @font-face{font-family:"JetBrains Mono";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/jetbrains-mono-latin-400-normal.woff2) format("woff2")}
@@ -533,3 +536,8 @@ a.tile:hover{text-decoration:none;background:rgba(255,255,255,.1)}
 .chart-card .chart-body{flex:1;min-height:0}
 .chart-box.tall{min-height:268px}
 .sb-brand .brand-sub{font-size:.68rem;letter-spacing:-.01em}
+
+/* author credit */
+.credit a{color:inherit;font-weight:600}
+.center-page{flex-direction:column;gap:6px}
+.center-credit{padding:12px 0 0}

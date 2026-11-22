@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Brainslad">
+<meta name="generator" content="MonitorIQ by Brainslad, https://github.com/brainslad/MonitorIQ">
 {{if .Refresh}}<meta http-equiv="refresh" content="{{.Refresh}}">{{end}}
 <title>{{.Title}} · MonitorIQ</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
@@ -77,13 +79,15 @@
 
 {{define "bottom"}}
 </main>
-<footer class="footer muted small">MonitorIQ {{.Version}} · Know before your users do.</footer>
+<footer class="footer muted small">{{template "credit" .Version}} · Know before your users do.</footer>
 </div>
 </div>
 <script src="/static/app.js"></script>
 </body>
 </html>{{end}}
 
+{{/* Author attribution: GPL-3.0 section 7(b) additional term, see NOTICE. Keep it in modified versions. */}}
+{{define "credit"}}<span class="credit"><a href="https://github.com/brainslad/MonitorIQ" rel="noopener">MonitorIQ</a>{{if .}} {{.}}{{end}} by <a href="https://github.com/brainslad" rel="noopener">Brainslad</a></span>{{end}}
 {{define "dot"}}<span class="dot {{statusClass .}}" title="{{statusLabel .}}"></span>{{end}}
 {{define "tbadge"}}<span class="tbadge t-{{.}}">{{upper .}}</span>{{end}}
 {{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
