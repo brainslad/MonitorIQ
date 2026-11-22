@@ -1,3 +1,6 @@
+/* Copyright (C) 2026 Brainslad <https://github.com/brainslad>
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Part of MonitorIQ; see LICENSE and NOTICE (author attribution must be kept). */
 // MonitorIQ front-end (no inline scripts: CSP script-src 'self').
 (function () {
   "use strict";
