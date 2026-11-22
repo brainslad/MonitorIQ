@@ -132,6 +132,8 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /monitors/{id}/check", s.handleMonitorCheckNow)
 	auth("GET /api/monitors/{id}/series", s.handleSeries)
 	auth("GET /api/dashboard/series", s.handleDashboardSeries)
+	auth("GET /export", s.handleExportForm)
+	auth("GET /export/download", s.handleExportDownload)
 
 	auth("GET /admin/hosts", s.handleHosts)
 	auth("GET /admin/hosts/new", s.handleHostForm)
