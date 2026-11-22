@@ -36,6 +36,48 @@
   <div class="chart-box monitor-chart"><canvas id="chart" data-series="/api/monitors/{{$m.ID}}/series"></canvas></div>
 </section>
 
+{{with .Data.Geo}}{{$g := .}}
+<section class="card geo-card" id="location">
+  <div class="card-head">
+    <div><h2>Network location</h2><p class="muted small">Where the checks go: from this monitoring system to the target</p></div>
+    <a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "settings"}}</a>
+  </div>
+  {{if not $g.DB.Ready}}<div class="note small">No geolocation database yet, so addresses cannot be placed on the map. <a href="/admin/geo">Download the free DB-IP Lite database</a> under Settings → Geolocation.</div>{{end}}
+  <div class="geo-wrap">
+    <div class="geo-mapbox">
+      {{if $g.Map.Empty}}<div class="geo-empty muted small">Nothing to place on the map yet: {{if not $g.DB.Ready}}the database is missing{{else if not $g.Probe.Located}}the location of this server is unknown (set it under Settings → Geolocation){{else}}the target has no known location{{end}}.</div>{{end}}
+      {{template "geomap" $g.Map}}
+      {{template "geo-legend" $g.Hops}}
+      <div class="geo-facts">
+        {{if $g.HasDistance}}<div><span class="muted small">Distance</span><strong>{{km $g.DistanceKm}}</strong></div>
+        <div><span class="muted small">Light-speed minimum RTT</span><strong>{{printf "%.1f" $g.MinRTTms}} ms</strong></div>
+        <div><span class="muted small">Last measured</span><strong>{{fmtMs $m.LastLatencyMs}}</strong></div>
+        {{else if $g.Local}}<div><span class="muted small">Path</span><strong>Same site / private network</strong></div>{{end}}
+        {{with $g.Hops}}<div><span class="muted small">Hops placed</span><strong>{{len .}}</strong></div>{{end}}
+      </div>
+    </div>
+    <div class="geo-side">
+      <div class="geo-end">
+        <h3><i class="lg probe"></i>Monitoring system</h3>
+        <dl class="kv tight">
+          <dt>Name</dt><dd>{{$g.Probe.Label}}{{if ne $g.Probe.Label $g.Probe.Hostname}} <span class="muted">({{$g.Probe.Hostname}})</span>{{end}}</dd>
+          {{with $g.Probe.LocalIPs}}<dt>Local addresses</dt><dd class="mono">{{join .}}</dd>{{end}}
+          {{if eq $g.Probe.LocFrom "fixed"}}<dt>Location</dt><dd>{{with $g.Probe.Loc.Place}}{{.}} · {{end}}{{$g.Probe.Loc.Coords}} <span class="muted small">(set by hand)</span></dd>{{end}}
+        </dl>
+        {{with $g.Probe.Public}}<div class="muted small geo-sub">Public address ({{$g.Probe.PublicFrom}})</div>{{template "geo-ip" .}}{{else}}<p class="muted small">{{with $g.Probe.PublicError}}{{.}}{{else}}Public address not shown (turned off in settings).{{end}}</p>{{end}}
+      </div>
+      <div class="geo-end">
+        <h3><i class="lg {{statusClass $m.DisplayStatus}}"></i>Target <span class="mono muted">{{$g.Target.Host}}</span></h3>
+        {{if $g.Target.Error}}<p class="muted small">{{$g.Target.Error}}</p>{{end}}
+        {{range $g.Target.IPs}}{{template "geo-ip" .}}{{end}}
+        {{if $g.Local}}<p class="muted small">Private address: drawn at the monitoring system's location.</p>{{end}}
+      </div>
+    </div>
+  </div>
+  {{if $g.AttrText}}<p class="geo-attr muted small"><a href="{{$g.AttrURL}}" rel="noopener" target="_blank">{{$g.AttrText}}</a> · locations are approximate</p>{{end}}
+</section>
+{{end}}
+
 {{with .Data.Latest}}{{with .Details}}
 <section class="card">
   <h2>Last check details</h2>
