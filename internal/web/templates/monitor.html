@@ -2,7 +2,7 @@
 {{$m := .Data.M}}{{$u := .Data.Uptimes}}{{$csrf := .CSRF}}
 <div class="page-head">
   <div>
-    <div class="crumbs muted"><a href="/">Dashboard</a> / {{$m.HostName}}</div>
+    <div class="crumbs-old muted"><a href="/">Dashboard</a> / {{$m.HostName}}</div>
     <h1>{{template "dot" $m.DisplayStatus}} {{$m.Name}}</h1>
     <div class="muted">{{template "tbadge" $m.Type}} {{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · every {{$m.IntervalSeconds}}s</div>
   </div>

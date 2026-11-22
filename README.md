@@ -15,7 +15,7 @@ One Go binary · PostgreSQL · dashboard, back-office and public status pages ·
   <a href="LICENSE">GPL-3.0</a>
 </p>
 
-![MonitorIQ dashboard](docs/screenshots/dashboard.png)
+![MonitorIQ dashboard](docs/screenshots/dashboard-light.png)
 
 ## Overview
 
@@ -51,7 +51,8 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 | **TLS certificate expiry** | Days until expiry, chain and hostname; warns (degraded) when fewer than N days remain |
 | **Custom TCP port** | Whether the port accepts connections and how fast |
 
-- **Dashboard** with KPIs (monitors by status, average uptime, response time, open incidents), a 24-hour response-time chart, recent incidents and a monitor table with status/type filters, search and hour-by-hour availability bars.
+- **Dashboard** with a greeting and summary line, a chart of every check by result with the average response time (24 hours, 7 days or 30 days), a fleet-health card per host, an hour-by-hour availability map, a certificate-renewal tracker, live incidents and a monitor table with status/type filters, search and hour-by-hour availability bars.
+- **Sidebar navigation** grouped into Monitoring, Administration and Account, with live counts, a collapsible layout and a quick search (press `/`).
 - **Dark and light mode**: follows the operating system by default and can be toggled from the top bar (the choice is remembered in the browser).
 - **Monitor page** with 24h/7d/30d/1-year uptime, a latency and availability chart from 1 hour to 2 years, last-check details (certificate, DNS answers, traceroute hops…), events and history.
 - **Back-office** to manage hosts, monitors (interval, timeout, failures before alerting, pause), status pages, users and retention.
@@ -70,11 +71,11 @@ MonitorIQ watches your websites and network services and tells you, on one scree
 
 ### Dashboard
 
-Everything at a glance: monitors by status, 24-hour and 30-day uptime, response time, open incidents, a response-time chart and a filterable table with hour-by-hour availability bars. It refreshes every minute.
+Everything at a glance. The top chart stacks every check by result (operational, degraded, down) with the average response time as a dotted line, and shows the weakest period of the range. The dark card sums up fleet health per host, open incidents and 30-day uptime. Below sit live incidents, an hour-by-hour availability map and a certificate-renewal tracker for TLS and HTTPS monitors, followed by the filterable table of all monitors. It refreshes every minute.
 
-| Dark mode | Light mode |
+| Light mode | Dark mode |
 |---|---|
-| ![Dashboard, dark](docs/screenshots/dashboard.png) | ![Dashboard, light](docs/screenshots/dashboard-light.png) |
+| ![Dashboard, light](docs/screenshots/dashboard-light.png) | ![Dashboard, dark](docs/screenshots/dashboard.png) |
 
 ### Monitor details
 
