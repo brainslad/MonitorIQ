@@ -106,6 +106,10 @@ type Monitor struct {
 	ConsecutiveFailures int
 	StatusChangedAt     *time.Time
 	CreatedAt           time.Time
+	// AlertEmails are extra e-mail recipients for this monitor (comma separated).
+	AlertEmails string
+	// AlertsMuted turns off e-mail alerts for this monitor.
+	AlertsMuted bool
 }
 
 // EffectiveTarget is the monitor target, falling back to the host address.
@@ -140,14 +144,14 @@ func (m *Monitor) DisplayStatus() checks.Status {
 
 const monitorCols = `m.id, m.host_id, h.name, h.address, m.name, m.type, m.target, m.port, m.interval_seconds,
 	m.timeout_seconds, m.retries, m.enabled, m.config, m.status, m.last_checked_at, m.last_latency_ms,
-	m.last_message, m.consecutive_failures, m.status_changed_at, m.created_at`
+	m.last_message, m.consecutive_failures, m.status_changed_at, m.created_at, m.alert_emails, m.alerts_muted`
 
 func scanMonitor(r pgx.Row) (Monitor, error) {
 	var m Monitor
 	var cfg []byte
 	err := r.Scan(&m.ID, &m.HostID, &m.HostName, &m.HostAddress, &m.Name, &m.Type, &m.Target, &m.Port,
 		&m.IntervalSeconds, &m.TimeoutSeconds, &m.Retries, &m.Enabled, &cfg, &m.Status, &m.LastCheckedAt,
-		&m.LastLatencyMs, &m.LastMessage, &m.ConsecutiveFailures, &m.StatusChangedAt, &m.CreatedAt)
+		&m.LastLatencyMs, &m.LastMessage, &m.ConsecutiveFailures, &m.StatusChangedAt, &m.CreatedAt, &m.AlertEmails, &m.AlertsMuted)
 	if err == nil && len(cfg) > 0 {
 		_ = json.Unmarshal(cfg, &m.Config)
 	}
@@ -213,6 +217,11 @@ func ValidateMonitor(m *Monitor) error {
 	if m.Retries < 0 || m.Retries > 10 {
 		return errors.New("failures before alerting must be between 0 and 10")
 	}
+	emails, err := NormalizeEmails(m.AlertEmails)
+	if err != nil {
+		return err
+	}
+	m.AlertEmails = emails
 	if m.Type == checks.TypeDNS {
 		switch strings.ToUpper(m.Config.RecordType) {
 		case "", "A", "AAAA", "CNAME", "MX", "TXT", "NS":
@@ -230,16 +239,18 @@ func (s *Store) SaveMonitor(ctx context.Context, m *Monitor) error {
 	cfg, _ := json.Marshal(m.Config)
 	if m.ID == 0 {
 		return s.Pool.QueryRow(ctx, `INSERT INTO monitors (host_id, name, type, target, port, interval_seconds,
-			timeout_seconds, retries, enabled, config) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-			m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg).Scan(&m.ID)
+			timeout_seconds, retries, enabled, config, alert_emails, alerts_muted) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+			m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg,
+			m.AlertEmails, m.AlertsMuted).Scan(&m.ID)
 	}
 	// Changing what is being checked resets the state so stale status is not shown.
 	_, err := s.Pool.Exec(ctx, `UPDATE monitors SET
 		status = CASE WHEN type <> $3 OR target <> $4 OR port <> $5 OR host_id <> $1 THEN 0 ELSE status END,
 		consecutive_failures = CASE WHEN type <> $3 OR target <> $4 OR port <> $5 OR host_id <> $1 THEN 0 ELSE consecutive_failures END,
 		host_id=$1, name=$2, type=$3, target=$4, port=$5, interval_seconds=$6, timeout_seconds=$7, retries=$8,
-		enabled=$9, config=$10, last_checked_at = NULL WHERE id=$11`,
-		m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg, m.ID)
+		enabled=$9, config=$10, alert_emails=$12, alerts_muted=$13, last_checked_at = NULL WHERE id=$11`,
+		m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg, m.ID,
+		m.AlertEmails, m.AlertsMuted)
 	return err
 }
 
@@ -265,6 +276,7 @@ type Transition struct {
 	Name      string
 	From, To  checks.Status
 	Message   string
+	At        time.Time
 }
 
 // NextState applies the retry policy and returns the new status and failure count.
@@ -348,7 +360,7 @@ func (s *Store) RecordResult(ctx context.Context, m *Monitor, res checks.Result,
 
 	var tr *Transition
 	if next != prev && !(prev == checks.Unknown && next == checks.Up) {
-		tr = &Transition{MonitorID: m.ID, Name: m.Name, From: prev, To: next, Message: res.Message}
+		tr = &Transition{MonitorID: m.ID, Name: m.Name, From: prev, To: next, Message: res.Message, At: at}
 		if _, err := tx.Exec(ctx, `INSERT INTO events (monitor_id, created_at, from_status, to_status, message)
 			VALUES ($1,$2,$3,$4,$5)`, m.ID, at, prev, next, res.Message); err != nil {
 			return nil, err
