@@ -104,6 +104,8 @@ func checkHTTP(ctx context.Context, m Monitor) Result {
 		leaf := resp.TLS.PeerCertificates[0]
 		details["cert_expires_at"] = leaf.NotAfter.UTC().Format(time.RFC3339)
 		details["cert_days_left"] = int(time.Until(leaf.NotAfter).Hours() / 24)
+		details["cert_issued_at"] = leaf.NotBefore.UTC().Format(time.RFC3339)
+		details["cert_issuer"] = leaf.Issuer.CommonName
 	}
 
 	res := Result{Status: Up, LatencyMs: ms(latency), Details: details}

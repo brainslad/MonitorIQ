@@ -1,68 +1,154 @@
-{{define "topstatus"}}{{$k := .Data.K}}
-<div class="live-status {{if $k.Down}}down{{else if $k.Degraded}}degraded{{else}}up{{end}}">
-  <span class="pulse"></span>
-  {{if $k.Down}}{{$k.Down}} {{if eq $k.Down 1}}monitor down{{else}}monitors down{{end}}{{else if $k.Degraded}}{{$k.Degraded}} degraded{{else}}All systems operational{{end}}
-</div>
-<div class="muted small">updated <strong class="fg" data-clock>{{clock .Data.Now}}</strong></div>
-{{end}}
 {{template "top" .}}
 {{$d := .Data}}{{$k := $d.K}}
-
-<section class="kpis">
-  <div class="card kpi">
-    <div class="kpi-label">Monitors</div>
-    <div class="kpi-value">{{$k.Total}}</div>
-    <div class="stack" aria-hidden="true">
-      <span class="s-up" style="width:{{$k.BarUp}}%"></span><span class="s-degraded" style="width:{{$k.BarDegraded}}%"></span><span class="s-down" style="width:{{$k.BarDown}}%"></span><span class="s-paused" style="width:{{$k.BarPaused}}%"></span>
-    </div>
-    <div class="kpi-foot"><b class="c-up">{{$k.Up}}</b> up · <b class="c-degraded">{{$k.Degraded}}</b> degraded · <b class="c-down">{{$k.Down}}</b> down · <b>{{$k.Paused}}</b> paused</div>
+<section class="hello">
+  <div>
+    <h1 class="greet" data-greeting data-name="{{firstName .User.Label}}">{{greeting $d.Now}}, {{firstName .User.Label}}</h1>
+    <p class="hello-sub">{{longDate $d.Now}} · {{$k.Active}} active {{if eq $k.Active 1}}monitor{{else}}monitors{{end}} · {{thousands $k.Checks24h}} checks in the last 24 hours ·
+      {{if $k.OpenIncidents}}<a class="needs" href="#incidents">{{$k.OpenIncidents}} {{if eq $k.OpenIncidents 1}}thing needs{{else}}things need{{end}} you</a>{{else}}<strong class="fg">all quiet</strong>{{end}}</p>
   </div>
-  <div class="card kpi">
-    <div class="kpi-label">Uptime <span class="accent">24h avg</span></div>
-    <div class="kpi-value {{pctLevel $k.Uptime24}}">{{pctf $k.Uptime24}}<small>{{if ge $k.Uptime24 0.0}}%{{end}}</small></div>
-    <div class="kpi-foot">30 days: {{pctf $k.Uptime30}}{{if ge $k.Uptime30 0.0}}%{{end}}</div>
-  </div>
-  <div class="card kpi">
-    <div class="kpi-label">Response <span class="accent">avg now</span></div>
-    <div class="kpi-value">{{if ge $k.RespAvg 0.0}}{{msNum $k.RespAvg}}<small>ms</small>{{else}}—{{end}}</div>
-    <div class="kpi-foot">{{if $k.SlowestName}}slowest: {{$k.SlowestName}} ({{msNum $k.SlowestMs}} ms){{else}}no data{{end}}</div>
-  </div>
-  <div class="card kpi">
-    <div class="kpi-label">Incidents</div>
-    <div class="kpi-value {{if $k.OpenIncidents}}bad{{else}}good{{end}}">{{$k.OpenIncidents}}<small>open</small></div>
-    <div class="kpi-foot">{{$k.Incidents24h}} in the last 24h</div>
+  <div class="hello-actions">
+    <a class="btn" href="/admin/status-pages">{{template "icon" "globe-out"}}<span>Status pages</span></a>
+    <a class="btn primary" href="/admin/monitors/new">{{template "icon" "plus"}}<span>New monitor</span></a>
   </div>
 </section>
 
-<section class="dash-mid">
-  <div class="card">
-    <div class="card-title">Response time <span class="accent">average across monitors · 24h</span></div>
-    <div class="chart-box"><canvas id="dash-chart" data-series="/api/dashboard/series"></canvas></div>
+{{if not $d.Monitors}}
+<section class="card empty">
+  <h2>Nothing is being monitored yet</h2>
+  <p class="muted">Create a <a href="/admin/hosts/new">host</a> and add monitors to it: HTTP/HTTPS, ping, traceroute, DNS, SMTP, TLS certificates or any TCP port.</p>
+  <a class="btn primary" href="/admin/hosts/new">{{template "icon" "plus"}}<span>New host</span></a>
+</section>
+{{else}}
+<section class="dash-top">
+  <div class="card chart-card">
+    <div class="card-head">
+      <div><h2>Checks and response time</h2><p class="muted small">Every check of every active monitor, by result</p></div>
+      <div class="seg" data-dash-ranges role="group" aria-label="Range">
+        <button type="button" class="active" data-range="24h">24 hours</button><button type="button" data-range="7d">7 days</button><button type="button" data-range="30d">30 days</button>
+      </div>
+      <a class="icon-btn" href="/admin/monitors" title="All monitors" aria-label="All monitors">{{template "icon" "arrow"}}</a>
+    </div>
+    <div class="chart-body">
+      <div class="chart-main">
+        <div class="big-row">
+          <div><div class="big"><span data-sum="uptime">{{pctf $k.Uptime24}}</span><small>%</small></div><div class="muted small" data-sum="uptime-label">availability over the last 24 hours</div></div>
+          <div class="legend"><span><i class="lg up"></i>Operational</span><span><i class="lg degraded"></i>Degraded</span><span><i class="lg down"></i>Down</span><span><i class="lg line"></i>Avg response</span></div>
+        </div>
+        <div class="chart-box tall"><canvas id="dash-chart" data-series="/api/dashboard/series" aria-label="Checks by result and average response time"></canvas></div>
+      </div>
+      <aside class="chart-side">
+        <div class="muted small">Weakest period</div>
+        <div class="side-big" data-sum="worst">—</div>
+        <div class="muted small" data-sum="worst-sub">&nbsp;</div>
+        <dl class="side-stats">
+          <div><dt>{{template "icon" "monitors"}}Checks run</dt><dd data-sum="checks">—</dd></div>
+          <div><dt>{{template "icon" "clock"}}Avg response</dt><dd data-sum="avg">—</dd></div>
+          <div><dt>{{template "icon" "bell"}}Incidents</dt><dd data-sum="incidents">—</dd></div>
+          <div><dt>{{template "icon" "hosts"}}Active monitors</dt><dd>{{$k.Active}}</dd></div>
+        </dl>
+        <p class="muted small side-hint">{{template "icon" "info"}}Hover a column to see its checks and response time.</p>
+      </aside>
+    </div>
   </div>
-  <div class="card incidents">
-    <div class="card-title">Recent incidents</div>
-    <div class="inc-list">
-    {{range $d.Incidents}}
-      <a class="inc" href="/monitors/{{.MonitorID}}">
-        <div class="inc-head"><strong>{{.MonitorName}}</strong>{{if .EndedAt}}<span class="pill resolved">RESOLVED</span>{{else}}<span class="pill open {{statusClass .To}}">OPEN</span>{{end}}</div>
-        <div class="muted small ellipsis2">{{.Message}}</div>
-        <div class="muted small">{{since .CreatedAt}} ago · {{if .EndedAt}}lasted {{between .CreatedAt .EndedAt}}{{else}}ongoing {{since .CreatedAt}}{{end}}</div>
+
+  <div class="card dark-card">
+    <div class="card-head">
+      <div><h2>Fleet health</h2><p class="small">{{$k.Total}} monitors · {{len $d.Hosts}} {{if eq (len $d.Hosts) 1}}host{{else}}hosts{{end}} shown · {{$k.Paused}} paused</p></div>
+      <a class="icon-btn" href="/admin/hosts" title="Hosts" aria-label="Hosts">{{template "icon" "arrow"}}</a>
+    </div>
+    <div class="big">{{$k.Online}}<span class="of"> / {{$k.Active}} online</span></div>
+    <div class="seg-bar" aria-hidden="true">
+      {{if $k.Up}}<span class="up" style="flex:{{$k.Up}}"></span>{{end}}{{if $k.Degraded}}<span class="degraded" style="flex:{{$k.Degraded}}"></span>{{end}}{{if $k.Down}}<span class="down" style="flex:{{$k.Down}}"></span>{{end}}{{if or $k.Paused $k.Unknown}}<span class="paused" style="flex:{{add $k.Paused $k.Unknown}}"></span>{{end}}
+    </div>
+    <div class="seg-labels"><span>Operational {{$k.Up}}</span><span>Degraded {{$k.Degraded}}</span><span>Down {{$k.Down}}</span><span>Paused {{$k.Paused}}</span></div>
+    <ul class="host-rows">
+      {{range $d.Hosts}}<li><a href="/admin/hosts/{{.ID}}/edit"><span>{{.Name}} <small>· {{.Monitors}} {{if eq .Monitors 1}}monitor{{else}}monitors{{end}}{{if .Down}} · <b class="c-down">{{.Down}} down</b>{{end}}</small></span><strong>{{if ge .Uptime 0.0}}{{pctf .Uptime}}%{{else}}—{{end}}</strong></a></li>{{end}}
+    </ul>
+    <div class="tiles">
+      <a class="tile" href="#incidents">
+        <div class="tile-label">{{template "icon" "bell"}}Open incidents</div>
+        <div class="tile-num">{{$k.OpenIncidents}}</div>
+        <div class="small tile-sub">{{if $k.LongestOpen}}longest ongoing for {{$k.LongestOpen}}{{else}}none right now{{end}}</div>
       </a>
-    {{else}}
-      <p class="muted small">No incidents in the last 7 days.</p>
-    {{end}}
+      <div class="tile">
+        <div class="tile-label">{{template "icon" "monitors"}}Checks, last 24 hours</div>
+        <div class="tile-num">{{thousands $k.Checks24h}}</div>
+        <div class="chips">{{range $d.Types}}<span>{{upper .}}</span>{{end}}</div>
+      </div>
+    </div>
+    <div class="tile wide">
+      <div class="tile-label">{{template "icon" "clock"}}Uptime, last 30 days</div>
+      <div class="tile-row"><span class="tile-num">{{pctf $k.Uptime30}}{{if ge $k.Uptime30 0.0}}<small>%</small>{{end}}</span><span class="small tile-sub">95 – 100 % scale · goal 99.9 %</span></div>
+      <div class="meter"><span style="width:{{$k.Meter30}}%"></span><i title="goal 99.9 %"></i></div>
     </div>
   </div>
 </section>
 
-<section class="card">
-  {{if not $d.Monitors}}
-  <div class="empty">
-    <h2>Nothing is being monitored yet</h2>
-    <p class="muted">Create a <a href="/admin/hosts/new">host</a> and add monitors to it: HTTP/HTTPS, ping, traceroute, DNS, SMTP, TLS certificates or any TCP port.</p>
-    <a class="btn primary" href="/admin/hosts/new">+ New host</a>
+<section class="dash-bottom">
+  <div class="card list-card" id="incidents">
+    <div class="card-head">
+      <div><h2>Incidents</h2><p class="muted small">{{$k.OpenIncidents}} open · {{$k.Incidents24h}} in the last 24 hours</p></div>
+      <span class="live-pill"><i></i>Live</span>
+    </div>
+    <ul class="inc-rows">
+      {{range $d.IncRows}}
+      <li><a href="/monitors/{{.MonitorID}}">
+        <span class="inc-time">{{shortWhen .CreatedAt}}</span>
+        <span class="inc-main"><strong>{{.MonitorName}}</strong><small>{{.Message}}</small></span>
+        <span class="inc-meta"><span class="minibar {{if .Open}}open {{statusClass .To}}{{else}}done{{end}}"><i style="width:{{.Pct}}%"></i></span><small>{{if .Open}}ongoing · {{.Dur}}{{else}}lasted {{.Dur}}{{end}}</small></span>
+      </a></li>
+      {{else}}
+      <li class="muted small inc-empty">{{template "icon" "check"}} No incidents in the last 7 days.</li>
+      {{end}}
+    </ul>
   </div>
-  {{else}}
+
+  <div class="card heat-card">
+    <div class="card-head">
+      <div><h2>Availability map</h2><p class="muted small">Hour by hour · last 24 hours</p></div>
+      <span class="chip-select">{{len $d.Heat}} monitors</span>
+    </div>
+    <div class="heat-big"><span class="big">{{pctf $d.HeatPct}}<small>%</small></span><span class="muted small">of monitor-hours fully operational</span></div>
+    <svg class="heat-arc" viewBox="0 0 400 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 12 Q200 -6 398 12"/></svg>
+    <div class="heat">
+      {{range $d.Heat}}
+      <a class="heat-row" href="/monitors/{{.ID}}"><span class="heat-name" title="{{.Name}}">{{.Name}}</span><span class="heat-cells">{{range .Cells}}<i class="hc {{.Level}}" title="{{hourLabel .Day}} · {{if .Total}}{{pctVal .Uptime}}{{else}}no data{{end}}"></i>{{end}}</span></a>
+      {{end}}
+    </div>
+    <div class="heat-foot"><span class="heat-name"></span><span class="heat-ticks">{{range $d.HeatHours}}<span>{{.}}</span>{{end}}<span>now</span></span></div>
+    <div class="heat-legend small muted"><span><i class="hc up"></i>Operational</span><span><i class="hc minor"></i>≥ 99 %</span><span><i class="hc degraded"></i>≥ 95 %</span><span><i class="hc down"></i>Below</span><span><i class="hc none"></i>No data</span></div>
+  </div>
+
+  <div class="card cert-card">
+    {{with $d.Certs.Cert}}
+    <div class="card-head">
+      <div><h2>Certificate renewal</h2><p class="muted small">{{.Name}} · {{.Target}}</p></div>
+      <a class="icon-btn" href="/monitors/{{.MonitorID}}" title="Open the monitor" aria-label="Open the monitor">{{template "icon" "arrow"}}</a>
+    </div>
+    <ol class="stepper">
+      {{range $i, $s := $d.Certs.Steps}}<li class="{{$s.State}}"><span class="node">{{if eq $s.State "done"}}{{template "icon" "check"}}{{else}}{{add $i 1}}{{end}}</span><span class="step-label">{{$s.Label}}</span></li>{{end}}
+    </ol>
+    <div class="now-box {{if lt $d.Certs.Left 7}}bad{{else if lt $d.Certs.Left 30}}warn{{end}}">
+      <small>Now · {{$d.Certs.Stage}}</small>
+      <strong>{{if lt $d.Certs.Left 0}}Expired {{neg $d.Certs.Left}} days ago{{else if eq $d.Certs.Left 0}}Expires today{{else}}Expires in {{$d.Certs.Left}} {{if eq $d.Certs.Left 1}}day{{else}}days{{end}}{{end}}</strong>
+      <span class="small">on {{fmtDate .NotAfter}}{{if .Issuer}} · issued by {{.Issuer}}{{end}}</span>
+    </div>
+    {{if $d.Certs.Lifetime}}
+    <div class="meter teal"><span style="width:{{$d.Certs.Progress}}%"></span></div>
+    <div class="small meter-caption"><strong>Day {{$d.Certs.Elapsed}}</strong> of {{$d.Certs.Lifetime}} · renew when 30 days are left</div>
+    {{end}}
+    <ul class="cert-list">
+      {{range $d.Certs.Others}}<li><a href="/monitors/{{.MonitorID}}">{{if lt .DaysLeft 30}}{{template "icon" "clock"}}{{else}}{{template "icon" "check"}}{{end}}<span>{{.Name}}</span><strong class="{{if lt .DaysLeft 7}}c-down{{else if lt .DaysLeft 30}}c-degraded{{end}}">{{.DaysLeft}} d</strong></a></li>{{end}}
+    </ul>
+    {{else}}
+    <div class="card-head"><div><h2>Certificate renewal</h2><p class="muted small">TLS and HTTPS monitors</p></div></div>
+    <div class="cert-empty">{{template "icon" "lock"}}<p>No certificates are being watched yet.</p><a class="btn" href="/admin/monitors/new">{{template "icon" "plus"}}<span>Add a TLS monitor</span></a></div>
+    {{end}}
+  </div>
+</section>
+
+<section class="card" id="all-monitors">
+  <div class="card-head"><div><h2>All monitors</h2><p class="muted small">Problems first · hour-by-hour availability for the last 24 hours</p></div></div>
   <div class="toolbar" data-filters>
     <div class="pills" data-filter-group="status">
       <button class="fpill active" data-value="all">All <span>{{$k.Total}}</span></button>
@@ -75,8 +161,7 @@
       <button class="fpill active" data-value="all">All types</button>
       {{range $d.Types}}<button class="fpill" data-value="{{.}}">{{upper .}}</button>{{end}}
     </div>
-    <input class="search" type="search" placeholder="search name or target…" data-search aria-label="Search">
-    <a class="btn primary" href="/admin/monitors/new">+ Monitor</a>
+    <input class="search" type="search" placeholder="Filter by name or target…" data-search aria-label="Filter monitors">
   </div>
   <div class="table-wrap">
   <table class="table mon-table">
@@ -98,7 +183,7 @@
   </table>
   <p class="muted small no-results" hidden>No monitors match the filters.</p>
   </div>
-  {{end}}
 </section>
+{{end}}
 <script src="/static/chart.umd.min.js"></script>
 {{template "bottom" .}}

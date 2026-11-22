@@ -346,6 +346,7 @@ type page struct {
 	FlashOK bool
 	Version string
 	Refresh int
+	Nav     store.NavCounts
 	Data    map[string]any
 }
 
@@ -361,6 +362,11 @@ func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, code int, 
 	}
 	p.User = userFrom(r)
 	p.CSRF = csrfFrom(r)
+	if p.User != nil {
+		if n, err := s.Store.NavCounts(r.Context()); err == nil {
+			p.Nav = n
+		}
+	}
 	p.Version = Version
 	if p.Flash == "" {
 		if c, err := r.Cookie(flashCookie); err == nil {
