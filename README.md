@@ -174,7 +174,7 @@ MonitorIQ installed successfully.
 
 1. Installs `iputils` and `traceroute`.
 2. Installs PostgreSQL (stream 16 on EL8/EL9 via dnf modules; native package on EL10), initialises it, creates the `monitoriq` database and role with a random password and enables `scram-sha-256` authentication on localhost.
-3. Uses the bundled binary or builds it (Go ≥ 1.22).
+3. Uses the bundled binary or builds it (Go ≥ 1.26; an older Go 1.21+ downloads the right toolchain by itself).
 4. Creates the `monitoriq` system user, installs `/usr/local/bin/monitoriq`, writes `/etc/monitoriq/monitoriq.env` and the `monitoriq.service` unit.
 5. Applies database migrations, creates the `admin` user and starts the service.
 
@@ -361,7 +361,7 @@ sudo -u postgres pg_dump -Fc monitoriq > monitoriq-$(date +%F).dump
 
 ## Development
 
-Requirements: Go ≥ 1.22 and PostgreSQL ≥ 12.
+Requirements: Go ≥ 1.26 and PostgreSQL ≥ 12.
 
 ```bash
 createdb monitoriq

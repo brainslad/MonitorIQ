@@ -25,7 +25,7 @@ OPEN_FW=0
 DB_URL=""
 PG_VERSION="16"
 FORCE_BUILD=0
-GO_MIN_MINOR=22
+GO_MIN_MINOR=21
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DST="/usr/local/bin/monitoriq"
