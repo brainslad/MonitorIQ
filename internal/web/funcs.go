@@ -19,6 +19,7 @@ import (
 
 func funcMap() template.FuncMap {
 	return template.FuncMap{
+		"asset":       assetURL,
 		"statusClass": func(s checks.Status) string { return s.String() },
 		"statusLabel": func(s checks.Status) string { return s.Label() },
 		"typeLabel":   checks.TypeLabel,

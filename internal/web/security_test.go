@@ -8,6 +8,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,25 @@ func TestStaticNoListing(t *testing.T) {
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != want {
 			t.Errorf("GET %s = %d, want %d", path, rec.Code, want)
+		}
+	}
+}
+
+func TestStaticVersioned(t *testing.T) {
+	h := (&Server{}).Handler()
+	u := assetURL("app.css")
+	if !strings.HasPrefix(u, "/static/app.css?v=") || len(assetVersion()) != 12 {
+		t.Fatalf("assetURL = %q", u)
+	}
+	for path, want := range map[string]string{
+		u:                     "public, max-age=31536000, immutable",
+		"/static/app.css":     "no-cache",
+		"/static/app.css?v=x": "no-cache",
+	} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != 200 || rec.Header().Get("Cache-Control") != want {
+			t.Errorf("GET %s = %d %q, want %q", path, rec.Code, rec.Header().Get("Cache-Control"), want)
 		}
 	}
 }

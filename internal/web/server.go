@@ -109,7 +109,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(staticFS, "static")
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
-	mux.Handle("GET /static/", cacheFor(24*time.Hour, noListing(fileServer)))
+	mux.Handle("GET /static/", staticCache(noListing(fileServer)))
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /branding/logo", s.handleLogo(false))
 	mux.HandleFunc("GET /branding/logo-dark", s.handleLogo(true))
@@ -334,13 +334,6 @@ func crossSite(r *http.Request) bool {
 	return false
 }
 
-func cacheFor(d time.Duration, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", int(d.Seconds())))
-		next.ServeHTTP(w, r)
-	})
-}
-
 // secureCookie reports whether cookies set in reply to r get the Secure flag.
 // Unless MONITORIQ_COOKIE_SECURE forces it, a cookie is Secure when the
 // browser reached MonitorIQ over HTTPS: directly, through a trusted proxy
@@ -527,6 +520,9 @@ func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, code int, 
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// Pages are never kept by browsers or proxies: after an update they
+	// always show the new version (and link the new static files).
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(code)
 	_, _ = buf.WriteTo(w)
 }

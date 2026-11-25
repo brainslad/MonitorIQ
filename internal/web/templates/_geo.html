@@ -1,6 +1,6 @@
 {{define "geomap"}}<div class="geo-zoom" data-geo-zoom><svg class="geo-map" viewBox="{{.ViewBox}}" role="img" aria-label="Map of the monitoring system and its targets" preserveAspectRatio="xMidYMid meet">
 <path class="geo-grid" d="{{.Grid}}"/>
-<use class="geo-land" href="/static/world.svg#land" x="0" y="0" width="1000" height="500"/>
+<use class="geo-land" href="{{asset "world.svg"}}#land" x="0" y="0" width="1000" height="500"/>
 {{range .Lines}}<path class="geo-line {{.Kind}} {{.Status}}" d="{{.D}}"/>{{end}}
 {{$fs := .FontSize}}{{range .Markers}}<g class="geo-mk {{.Kind}} {{.Status}}"><title>{{.Title}}</title>{{if eq .Kind "probe"}}<circle class="halo" cx="{{printf "%.2f" .X}}" cy="{{printf "%.2f" .Y}}" r="{{printf "%.2f" (mul .R 2.2)}}"/>{{end}}<circle cx="{{printf "%.2f" .X}}" cy="{{printf "%.2f" .Y}}" r="{{printf "%.2f" .R}}"/>{{if gt .Count 1}}<text class="cnt" x="{{printf "%.2f" .X}}" y="{{printf "%.2f" (add2 .Y (mul $fs 0.3))}}" text-anchor="middle" font-size="{{printf "%.2f" (mul $fs 0.75)}}">{{.Count}}</text>{{end}}{{if .Label}}<text x="{{printf "%.2f" .LX}}" y="{{printf "%.2f" .LY}}" text-anchor="{{.Anchor}}" font-size="{{printf "%.2f" $fs}}">{{.Label}}</text>{{end}}</g>{{end}}
 </svg>
