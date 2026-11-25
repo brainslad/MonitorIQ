@@ -1,0 +1,20 @@
+{{template "top" .}}{{$b := .Data.B}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "branding"}}
+<div class="grid2">
+<form class="card form" method="post" action="/admin/branding" data-branding-form>
+  <h2>Footer</h2>
+  {{template "csrf" .CSRF}}
+  <fieldset><legend>Footer</legend>
+    <label>Footer line<input name="footer" maxlength="{{.Data.MaxFooter}}" value="{{$b.FooterLine}}" placeholder="{{.Data.Slogan}}" data-footer-input></label>
+    <p class="muted small m0">Shown after “MonitorIQ by Brainslad” at the bottom of every page. Leave empty for “{{.Data.Slogan}}”. The author credit itself always stays (licence term, see NOTICE).</p>
+  </fieldset>
+  <div class="form-actions"><button class="btn primary">Save</button></div>
+</form>
+<section class="card">
+  <h2>Preview</h2>
+  <p class="muted small">How the footer will look.</p>
+  <p class="footer muted small bp-footer">{{template "credit" .Version}} · <span data-footer-preview>{{$b.FooterLine}}</span></p>
+</section>
+</div>
+{{template "bottom" .}}

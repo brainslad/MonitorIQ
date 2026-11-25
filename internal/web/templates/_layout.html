@@ -81,7 +81,7 @@
 
 {{define "bottom"}}
 </main>
-<footer class="footer muted small">{{template "credit" .Version}} · Know before your users do.</footer>
+<footer class="footer muted small">{{template "credit" .Version}} · {{.Brand.FooterLine}}</footer>
 </div>
 </div>
 <script src="/static/app.js"></script>
@@ -95,7 +95,7 @@
 {{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
 {{define "badge"}}<span class="badge {{statusClass .}}">{{statusLabel .}}</span>{{end}}
 {{define "source"}}{{if eq . "ldap"}}<span class="tbadge t-src">LDAP</span>{{else if eq . "oidc"}}<span class="tbadge t-src">SSO</span>{{else}}<span class="tbadge">LOCAL</span>{{end}}{{end}}
-{{define "settings-tabs"}}<div class="tabs"><a href="/admin/settings" class="{{if eq . "retention"}}active{{end}}">Data retention</a><a href="/admin/auth" class="{{if eq . "auth"}}active{{end}}">Authentication</a><a href="/admin/email" class="{{if eq . "email"}}active{{end}}">Email</a><a href="/admin/geo" class="{{if eq . "geo"}}active{{end}}">Geolocation</a></div>{{end}}
+{{define "settings-tabs"}}<div class="tabs"><a href="/admin/settings" class="{{if eq . "retention"}}active{{end}}">Data retention</a><a href="/admin/auth" class="{{if eq . "auth"}}active{{end}}">Authentication</a><a href="/admin/email" class="{{if eq . "email"}}active{{end}}">Email</a><a href="/admin/geo" class="{{if eq . "geo"}}active{{end}}">Geolocation</a><a href="/admin/branding" class="{{if eq . "branding"}}active{{end}}">Branding</a></div>{{end}}
 {{define "totp-setup"}}<div class="totp-setup">
   <img class="qr" src="{{.QR}}" alt="QR code for your authenticator app" width="180" height="180">
   <div>
