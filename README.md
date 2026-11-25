@@ -69,6 +69,7 @@ MonitorIQ watches your websites and network services and tells you, on one scree
   - events/incidents (default 730 days).
   Cleanup runs automatically every hour.
 - **E-mail alerts** through any SMTP server (STARTTLS, TLS or a local relay, with authentication): a message when a monitor goes down, recovers or becomes degraded, a daily digest of certificates that expire soon, per-monitor recipients and muting, users who opt in from *My account*, a test button and a log of sent messages.
+- **Push alerts with [Pushover](https://pushover.net)** (iPhone, Android, desktop), next to or instead of e-mail: a priority per kind of change (from silent to *emergency*, which repeats until someone acknowledges it), per-monitor opt-in and extra user or group keys, optional devices and sound, the certificate digest, a test button and a log.
 - **Sign-in options**: local accounts, **LDAP / Active Directory** (with group restriction) and **single sign-on** through OpenID Connect: **Microsoft Entra ID (Azure AD)**, Google Workspace, Okta, Keycloak, Authentik, AD FS…
 - **Two-factor authentication** with any authenticator app (TOTP, QR code), 10 single-use recovery codes, and an option to make it mandatory.
 - **Security**: bcrypt passwords, server-side sessions, CSRF protection, login and 2FA rate limiting, AES-256-GCM encryption of stored secrets, CSP headers, a hardened systemd unit and an unprivileged service user.
@@ -272,6 +273,17 @@ Open **Settings → Email**, enter your SMTP server and sender address, tick *Se
 - **Log:** the last messages and any errors are listed on the same page and in the service log (`journalctl -u monitoriq`).
 - The SMTP password is encrypted in the database with `MONITORIQ_SECRET_KEY`. Usernames and passwords are only sent over STARTTLS or TLS (except to `localhost`).
 
+### Push alerts (Pushover)
+
+1. At [pushover.net](https://pushover.net), copy your **user key** (or create a delivery group and use its key) and create an application (*Your Applications → Create an Application*, name it MonitorIQ) to get its **API token**.
+2. Open **Settings → Pushover**, paste both keys, tick *Send push notifications* and press **Send test**.
+3. Choose which monitors push: each monitor has *Send this monitor's alerts to the default Pushover key* (ticked on existing monitors, and on new ones unless you change *New monitors send to the default key*). Tick several monitors in the list and use **Pushover on / off** to change them at once.
+
+- **What is sent:** the same changes as by e-mail (down, recovery, degraded), each switched on separately, with its own priority: *lowest* (only listed in the app), *low* (silent), *normal*, *high* (also during quiet hours) or *emergency* (repeats every N seconds until acknowledged, for at most 3 hours). Changes within 20 seconds are grouped into one message per set of keys, with the highest priority among them.
+- **Who gets it:** the default key, for monitors that have it ticked, plus the *extra Pushover user or group keys* of each monitor (like the extra e-mail recipients). The default key is optional if every monitor has its own keys. A [delivery group](https://pushover.net/groups) key reaches a whole team. *Mute e-mail alerts* on a monitor only affects e-mail.
+- The daily **certificate digest** can be pushed too; its number of days and hour come from **Settings → Email**.
+- Pushover works whether or not e-mail is turned on. Both keys are encrypted in the database with `MONITORIQ_SECRET_KEY`. Messages go to `https://api.pushover.net`, so the server needs outbound HTTPS.
+
 ### Network map and geolocation
 
 1. Open **Settings → Geolocation** and press **Download DB-IP Lite** (or run `sudo -u monitoriq monitoriq geoip update`). This saves the free [DB-IP Lite](https://db-ip.com/db/lite.php) city and ASN databases (about 130 MB, CC BY 4.0) to `/var/lib/monitoriq/geoip`. Tick *Download the new database edition every month* to keep them current. To use MaxMind GeoLite2 instead, copy `GeoLite2-City.mmdb` and `GeoLite2-ASN.mmdb` there as `city.mmdb` and `asn.mmdb`; the server reloads changed files within an hour.
@@ -318,6 +330,7 @@ monitoriq check smtp mail.example.com 587 --config '{"smtp_tls":"starttls"}'
 monitoriq check tcp example.com 3306
 monitoriq email test you@example.com           # send a test e-mail with the saved settings
 monitoriq email digest                         # send the certificate digest now
+monitoriq pushover test                        # send a test push message with the saved settings
 monitoriq geoip update                         # download the DB-IP Lite geolocation databases
 monitoriq geoip lookup example.com             # location, network and reverse DNS of a host or IP
 monitoriq version

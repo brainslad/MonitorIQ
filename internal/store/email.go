@@ -74,8 +74,19 @@ type EmailLog struct {
 	Error      string
 }
 
-// LogEmail records a message that was sent or failed.
+// Notification channels recorded in the log.
+const (
+	ChannelEmail    = "email"
+	ChannelPushover = "pushover"
+)
+
+// LogEmail records an e-mail that was sent or failed.
 func (s *Store) LogEmail(ctx context.Context, kind string, to []string, subject string, sendErr error) error {
+	return s.LogNotification(ctx, ChannelEmail, kind, to, subject, sendErr)
+}
+
+// LogNotification records a message sent (or not) on any channel.
+func (s *Store) LogNotification(ctx context.Context, channel, kind string, to []string, subject string, sendErr error) error {
 	msg := ""
 	if sendErr != nil {
 		msg = sendErr.Error()
@@ -83,15 +94,20 @@ func (s *Store) LogEmail(ctx context.Context, kind string, to []string, subject 
 			msg = msg[:500]
 		}
 	}
-	_, err := s.Pool.Exec(ctx, `INSERT INTO email_log (kind, recipients, subject, ok, error) VALUES ($1,$2,$3,$4,$5)`,
-		kind, strings.Join(to, ", "), subject, sendErr == nil, msg)
+	_, err := s.Pool.Exec(ctx, `INSERT INTO email_log (channel, kind, recipients, subject, ok, error) VALUES ($1,$2,$3,$4,$5,$6)`,
+		channel, kind, strings.Join(to, ", "), subject, sendErr == nil, msg)
 	return err
 }
 
-// RecentEmails returns the latest messages, newest first.
+// RecentEmails returns the latest e-mails, newest first.
 func (s *Store) RecentEmails(ctx context.Context, limit int) ([]EmailLog, error) {
+	return s.RecentNotifications(ctx, ChannelEmail, limit)
+}
+
+// RecentNotifications returns the latest messages of one channel, newest first.
+func (s *Store) RecentNotifications(ctx context.Context, channel string, limit int) ([]EmailLog, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT id, created_at, kind, recipients, subject, ok, error
-		FROM email_log ORDER BY created_at DESC, id DESC LIMIT $1`, limit)
+		FROM email_log WHERE channel=$1 ORDER BY created_at DESC, id DESC LIMIT $2`, channel, limit)
 	if err != nil {
 		return nil, err
 	}

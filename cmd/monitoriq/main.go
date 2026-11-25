@@ -51,6 +51,7 @@ Usage:
   monitoriq check <type> <target> [port]  run a one-off check (diagnostics)
   monitoriq email test <address>          send a test e-mail with the saved settings
   monitoriq email digest                  send the certificate digest now
+  monitoriq pushover test                 send a test push message with the saved settings
   monitoriq geoip update                  download the free DB-IP Lite geolocation databases
   monitoriq geoip lookup <ip|host>        show what the databases know about an address
   monitoriq version                       print the version
@@ -96,6 +97,8 @@ func main() {
 		checkCmd(args[1:])
 	case "email":
 		emailCmd(args[1:])
+	case "pushover":
+		pushoverCmd(args[1:])
 	case "geoip":
 		geoipCmd(args[1:])
 	case "version", "--version", "-v":
@@ -381,6 +384,36 @@ func emailCmd(args []string) {
 		fatal("%v", err)
 	}
 	fmt.Println("Test message sent to " + args[1] + ".")
+}
+
+func pushoverCmd(args []string) {
+	if len(args) != 1 || args[0] != "test" {
+		fatal("usage: monitoriq pushover test")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		fatal("%v", err)
+	}
+	st := openStore()
+	defer st.Close()
+	ctx := context.Background()
+	if err := st.Migrate(ctx); err != nil {
+		fatal("migrations: %v", err)
+	}
+	box, _, err := auth.LoadBox(cfg.SecretKey, cfg.DataDir)
+	if err != nil {
+		fatal("secret key: %v", err)
+	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	n := notify.New(st, box, log, cfg.BaseURL)
+	ps, err := n.PushoverSettings(ctx)
+	if err != nil {
+		fatal("pushover settings: %v", err)
+	}
+	if err := n.SendPushoverTest(ctx, ps, "command line"); err != nil {
+		fatal("%v", err)
+	}
+	fmt.Println("Test push message sent.")
 }
 
 func geoipCmd(args []string) {

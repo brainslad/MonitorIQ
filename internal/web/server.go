@@ -56,7 +56,7 @@ type Server struct {
 	Log   *slog.Logger
 	Box   *auth.Box
 	OIDC  *auth.OIDC
-	// Notifier sends e-mail (set by main; tests may leave it nil).
+	// Notifier sends e-mail and push alerts (set by main; tests may leave it nil).
 	Notifier *notify.Notifier
 	// Geo finds where monitored targets and this server are (set by main).
 	Geo *geo.Service
@@ -156,6 +156,7 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/monitors/{id}/delete", s.handleMonitorDelete)
 	auth("POST /admin/monitors/{id}/toggle", s.handleMonitorToggle)
 	auth("POST /admin/monitors/move", s.handleMonitorsMove)
+	auth("POST /admin/monitors/pushover", s.handleMonitorsPushover)
 
 	auth("GET /admin/groups", s.handleGroups)
 	auth("GET /admin/groups/new", s.handleGroupForm)
@@ -194,6 +195,9 @@ func (s *Server) Handler() http.Handler {
 	auth("GET /admin/email", s.handleEmailSettings)
 	auth("POST /admin/email", s.handleEmailSettingsSave)
 	auth("POST /admin/email/test", s.handleEmailTest)
+	auth("GET /admin/pushover", s.handlePushoverSettings)
+	auth("POST /admin/pushover", s.handlePushoverSettingsSave)
+	auth("POST /admin/pushover/test", s.handlePushoverTest)
 	auth("POST /account/email", s.handleAccountEmail)
 	auth("GET /admin/branding", s.handleBrandingForm)
 	mux.Handle("POST /admin/branding", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))

@@ -143,6 +143,16 @@ type Item struct {
 	URL       string
 }
 
+// PushoverSettings loads the current Pushover settings.
+func (n *Notifier) PushoverSettings(ctx context.Context) (PushoverSettings, error) {
+	raw, err := n.Store.GetSetting(ctx, PushoverSettingsKey)
+	if err != nil {
+		return DefaultPushoverSettings(), err
+	}
+	return LoadPushoverSettings(raw, n.Box)
+}
+
+// flush sends the queued status changes on every enabled channel.
 func (n *Notifier) flush(ctx context.Context) {
 	trs := n.take()
 	if len(trs) == 0 {
@@ -151,11 +161,123 @@ func (n *Notifier) flush(ctx context.Context) {
 	st, err := n.Settings(ctx)
 	if err != nil {
 		n.Log.Error("e-mail settings", "err", err)
-		return
+	} else if st.Enabled {
+		n.flushEmail(ctx, st, trs)
 	}
-	if !st.Enabled {
-		return
+	ps, err := n.PushoverSettings(ctx)
+	if err != nil {
+		n.Log.Error("pushover settings", "err", err)
+	} else if ps.Enabled {
+		n.flushPushover(ctx, ps, n.linkBase(st), trs)
 	}
+}
+
+// item describes a status change of a monitor for a message.
+func (n *Notifier) item(ctx context.Context, m *store.Monitor, tr store.Transition, base string) Item {
+	it := Item{MonitorID: m.ID, Name: m.Name, Host: m.HostName, Target: m.EffectiveTarget(), Type: m.Type,
+		From: tr.From, To: tr.To, Message: tr.Message, At: tr.At}
+	if m.Port > 0 {
+		it.Target += ":" + fmt.Sprint(m.Port)
+	}
+	if prev, err := n.Store.PreviousChange(ctx, m.ID, tr.At); err == nil && prev != nil {
+		it.Lasted = Duration(tr.At.Sub(*prev))
+	}
+	if base != "" {
+		it.URL = fmt.Sprintf("%s/monitors/%d", base, m.ID)
+	}
+	return it
+}
+
+// pushoverRecipients returns the keys that receive a monitor's push alerts:
+// the default key if the monitor has "Pushover" ticked, plus its own keys.
+func pushoverRecipients(ps PushoverSettings, m *store.Monitor) []string {
+	var out []string
+	if m.Pushover && ps.UserKey != "" {
+		out = append(out, ps.UserKey)
+	}
+	extra, _ := store.ParsePushoverKeys(m.PushoverKeys)
+	for _, k := range extra {
+		if len(out) == 0 || k != out[0] { // the extra keys are already unique
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// flushPushover sends one push message per set of recipients with every wanted change.
+func (n *Notifier) flushPushover(ctx context.Context, ps PushoverSettings, base string, trs []store.Transition) {
+	type group struct {
+		to    []string
+		items []Item
+		prios []int
+	}
+	groups := map[string]*group{}
+	var order []string
+	for _, tr := range trs {
+		ok, prio := ps.wanted(tr.From, tr.To)
+		if !ok {
+			continue
+		}
+		m, err := n.Store.GetMonitor(ctx, tr.MonitorID)
+		if err != nil {
+			continue
+		}
+		to := pushoverRecipients(ps, m)
+		if len(to) == 0 {
+			continue
+		}
+		key := strings.Join(to, ",")
+		g := groups[key]
+		if g == nil {
+			g = &group{to: to}
+			groups[key] = g
+			order = append(order, key)
+		}
+		g.items = append(g.items, n.item(ctx, m, tr, base))
+		g.prios = append(g.prios, prio)
+	}
+	for _, k := range order {
+		g := groups[k]
+		msg := PushAlert(g.items, g.prios, base)
+		msg.To = g.to
+		n.push(ctx, ps, KindAlert, msg)
+	}
+}
+
+func (n *Notifier) push(ctx context.Context, ps PushoverSettings, kind string, m PushMessage) error {
+	err := SendPushover(ctx, ps, m)
+	to := m.To
+	if len(to) == 0 {
+		to = []string{ps.UserKey}
+	}
+	shown := make([]string, len(to))
+	for i, k := range to {
+		shown[i] = store.MaskKey(k)
+		if k == ps.UserKey {
+			shown[i] = "default key"
+		}
+	}
+	if ps.Devices != "" {
+		shown = append(shown, "devices: "+ps.Devices)
+	}
+	if lerr := n.Store.LogNotification(context.WithoutCancel(ctx), store.ChannelPushover, kind, shown, m.Title, err); lerr != nil {
+		n.Log.Error("pushover log", "err", lerr)
+	}
+	if err != nil {
+		n.Log.Error("push not sent", "kind", kind, "to", strings.Join(shown, ","), "err", err)
+	} else {
+		n.Log.Info("push sent", "kind", kind, "to", strings.Join(shown, ","), "priority", m.Priority, "title", m.Title)
+	}
+	return err
+}
+
+// SendPushoverTest sends a test push with the given (possibly unsaved) settings.
+func (n *Notifier) SendPushoverTest(ctx context.Context, ps PushoverSettings, by string) error {
+	st, _ := n.Settings(ctx)
+	return n.push(ctx, ps, KindTest, PushTest(by, n.linkBase(st)))
+}
+
+func (n *Notifier) flushEmail(ctx context.Context, st Settings, trs []store.Transition) {
 	subs, err := n.Store.AlertSubscribers(ctx)
 	if err != nil {
 		n.Log.Error("e-mail subscribers", "err", err)
@@ -175,17 +297,7 @@ func (n *Notifier) flush(ctx context.Context) {
 		if len(to) == 0 {
 			continue
 		}
-		it := Item{MonitorID: m.ID, Name: m.Name, Host: m.HostName, Target: m.EffectiveTarget(), Type: m.Type,
-			From: tr.From, To: tr.To, Message: tr.Message, At: tr.At}
-		if m.Port > 0 {
-			it.Target += ":" + fmt.Sprint(m.Port)
-		}
-		if prev, err := n.Store.PreviousChange(ctx, m.ID, tr.At); err == nil && prev != nil {
-			it.Lasted = Duration(tr.At.Sub(*prev))
-		}
-		if base != "" {
-			it.URL = fmt.Sprintf("%s/monitors/%d", base, m.ID)
-		}
+		it := n.item(ctx, m, tr, base)
 		key := strings.Join(to, ",")
 		groups[key] = append(groups[key], it)
 		rcpts[key] = to
@@ -260,7 +372,13 @@ func (n *Notifier) SendTest(ctx context.Context, st Settings, to string, by stri
 // maybeDigest sends the certificate digest once a day, after DigestHour.
 func (n *Notifier) maybeDigest(ctx context.Context) {
 	st, err := n.Settings(ctx)
-	if err != nil || !st.Enabled || !st.CertDigest {
+	if err != nil {
+		return
+	}
+	ps, perr := n.PushoverSettings(ctx)
+	mail := st.Enabled && st.CertDigest
+	push := perr == nil && ps.Enabled && ps.CertDigest
+	if !mail && !push {
 		return
 	}
 	now := n.now()
@@ -276,7 +394,56 @@ func (n *Notifier) maybeDigest(ctx context.Context) {
 		n.Log.Error("e-mail digest state", "err", err)
 		return
 	}
-	_, _ = n.SendDigest(ctx, st)
+	if mail {
+		_, _ = n.SendDigest(ctx, st)
+	}
+	if push {
+		_, _ = n.SendPushoverDigest(ctx, ps, st)
+	}
+}
+
+// SendPushoverDigest pushes the certificate digest now, using the number of
+// days from the e-mail settings, and returns how many messages were sent.
+func (n *Notifier) SendPushoverDigest(ctx context.Context, ps PushoverSettings, st Settings) (int, error) {
+	certs, err := n.Store.Certificates(ctx)
+	if err != nil {
+		return 0, err
+	}
+	base := n.linkBase(st)
+	groups := map[string][]CertItem{}
+	rcpts := map[string][]string{}
+	var order []string
+	for _, c := range certs {
+		if c.DaysLeft() > st.CertDays {
+			continue
+		}
+		m, err := n.Store.GetMonitor(ctx, c.MonitorID)
+		if err != nil {
+			continue
+		}
+		to := pushoverRecipients(ps, m)
+		if len(to) == 0 {
+			continue
+		}
+		key := strings.Join(to, ",")
+		if _, ok := groups[key]; !ok {
+			order = append(order, key)
+		}
+		groups[key] = append(groups[key], CertItem{Name: c.Name, Target: c.Target, Issuer: c.Issuer, NotAfter: c.NotAfter, DaysLeft: c.DaysLeft()})
+		rcpts[key] = to
+	}
+	sent := 0
+	var lastErr error
+	for _, k := range order {
+		msg := PushDigest(groups[k], st.CertDays, base)
+		msg.To = rcpts[k]
+		if err := n.push(ctx, ps, KindDigest, msg); err != nil {
+			lastErr = err
+			continue
+		}
+		sent++
+	}
+	return sent, lastErr
 }
 
 // SendDigest sends the certificate digest now and returns how many messages were sent.

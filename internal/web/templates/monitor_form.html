@@ -76,6 +76,12 @@
     <label class="check"><input type="checkbox" name="alerts_muted" value="1" {{if $m.AlertsMuted}}checked{{end}}> Mute e-mail alerts for this monitor</label>
   </fieldset>
 
+  <fieldset><legend>Pushover alerts</legend>
+    {{with .Data.Pushover}}<p class="muted small">{{if .Enabled}}Push alerts go to the default key when ticked below, plus the keys you add here. <a href="/admin/pushover">Pushover settings</a>{{else}}Pushover is turned off. Set it up under <a href="/admin/pushover">Settings → Pushover</a>.{{end}}</p>{{end}}
+    <label class="check"><input type="checkbox" name="pushover" value="1" {{if $m.Pushover}}checked{{end}}> Send this monitor's alerts to the default Pushover key</label>
+    <label>Extra Pushover user or group keys for this monitor <span class="muted small">(comma separated, optional)</span><input name="pushover_keys" value="{{$m.PushoverKeys}}" placeholder="uQiRzpo4DXghDmr9QzzfQu27cmVRsG" autocomplete="off" spellcheck="false"></label>
+  </fieldset>
+
   <label class="check"><input type="checkbox" name="enabled" value="1" {{if $m.Enabled}}checked{{end}}> Enabled</label>
   <div class="form-actions"><a class="btn ghost" href="{{if $m.ID}}/monitors/{{$m.ID}}{{else}}/admin/monitors{{end}}">Cancel</a><button class="btn primary" type="submit">Save</button></div>
 </form>

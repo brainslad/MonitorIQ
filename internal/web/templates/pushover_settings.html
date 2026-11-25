@@ -1,0 +1,81 @@
+{{template "top" .}}{{$s := .Data.S}}{{$d := .Data}}
+<div class="page-head"><h1>Settings</h1></div>
+{{template "settings-tabs" "pushover"}}
+{{if .Data.TestMsg}}<div class="flash {{if .Data.TestOK}}ok{{else}}err{{end}}" role="status">{{.Data.TestMsg}}</div>{{end}}
+<form class="form" method="post" action="/admin/pushover">
+{{template "csrf" .CSRF}}
+<input type="hidden" name="token_enc" value="{{.Data.TokenEnc}}">
+<input type="hidden" name="user_enc" value="{{.Data.UserEnc}}">
+<div class="grid2">
+<section class="card">
+  <h2>Pushover</h2>
+  <label class="check"><input type="checkbox" name="enabled" value="1" {{if $s.Enabled}}checked{{end}}> Send push notifications</label>
+  <p class="muted small"><a href="https://pushover.net" target="_blank" rel="noopener">Pushover</a> delivers alerts to iPhone, Android and desktop apps. It works next to e-mail: each channel has its own settings. Create an application at pushover.net (<em>Your Applications → Create an Application</em>) to get its token; your user key is on the pushover.net dashboard. A group key sends to every member of a delivery group.</p>
+  <fieldset><legend>Keys</legend>
+    <label>Application API token<input name="token" autocomplete="off" spellcheck="false" placeholder="{{if .Data.HasToken}}•••••••• (saved, leave empty to keep){{else}}azGDORePK8gMaC0QOYAMyEEuzJnyUi{{end}}"></label>
+    <label>Default user or group key<input name="user_key" autocomplete="off" spellcheck="false" placeholder="{{if .Data.HasUser}}•••••••• (saved, leave empty to keep){{else}}uQiRzpo4DXghDmr9QzzfQu27cmVRsG{{end}}"></label>
+    {{if or .Data.HasToken .Data.HasUser}}<label class="check small"><input type="checkbox" name="clear_keys" value="1"> Remove the saved keys</label>{{end}}
+  </fieldset>
+  <fieldset><legend>Monitors</legend>
+    <p class="small">{{$d.Ticked}} of {{$d.Monitors}} monitors send to the default key{{if $d.WithKeys}}; {{$d.WithKeys}} also have their own keys{{end}}. <a href="/admin/monitors">Change them</a> in each monitor's settings, or tick several in the monitor list and use <em>Pushover on / off</em>.</p>
+    <label class="check"><input type="checkbox" name="new_monitors" value="1" {{if $s.NewMonitors}}checked{{end}}> New monitors send to the default key</label>
+  </fieldset>
+  <fieldset><legend>Delivery</legend>
+    <div class="grid3 g2">
+      <label>Devices <span class="muted small">(optional, comma separated)</span><input name="devices" value="{{$s.Devices}}" placeholder="all devices"></label>
+      <label>Sound <span class="muted small">(optional)</span><input name="sound" value="{{$s.Sound}}" placeholder="the user's default" list="pushover-sounds"></label>
+    </div>
+    <datalist id="pushover-sounds">{{range $x := (split "pushover bike bugle cashregister classical cosmic falling gamelan incoming intermission magic mechanical pianobar siren spacealarm tugboat alien climb persistent echo updown vibrate none")}}<option value="{{$x}}">{{end}}</datalist>
+  </fieldset>
+</section>
+
+<section class="card">
+  <h2>Alerts</h2>
+  <fieldset><legend>When to send, and how urgently</legend>
+    <div class="grid3 g2">
+      <label class="check"><input type="checkbox" name="on_down" value="1" {{if $s.OnDown}}checked{{end}}> <span>A monitor goes <strong class="c-down">down</strong></span></label>
+      <select name="down_priority" aria-label="Priority when a monitor goes down">{{range .Data.Priorities}}<option value="{{.Value}}" {{if eq .Value $s.DownPriority}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+      <label class="check"><input type="checkbox" name="on_recovery" value="1" {{if $s.OnRecovery}}checked{{end}}> <span>A monitor <strong class="c-up">recovers</strong></span></label>
+      <select name="recovery_priority" aria-label="Priority when a monitor recovers">{{range .Data.Priorities}}<option value="{{.Value}}" {{if eq .Value $s.RecoveryPriority}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+      <label class="check"><input type="checkbox" name="on_degraded" value="1" {{if $s.OnDegraded}}checked{{end}}> <span>A monitor becomes <strong class="c-degraded">degraded</strong> or returns to normal</span></label>
+      <select name="degraded_priority" aria-label="Priority when a monitor becomes degraded">{{range .Data.Priorities}}<option value="{{.Value}}" {{if eq .Value $s.DegradedPriority}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+    </div>
+    <p class="muted small">Changes within 20 seconds are grouped into one message per set of keys, sent with the highest priority among them.</p>
+  </fieldset>
+  <fieldset><legend>Emergency priority</legend>
+    <div class="grid3 g2">
+      <label>Repeat every (seconds)<input name="retry" type="number" min="30" max="10800" value="{{$s.Retry}}"></label>
+      <label>Stop after (seconds)<input name="expire" type="number" min="30" max="10800" value="{{$s.Expire}}"></label>
+    </div>
+    <p class="muted small">An emergency alert sounds again every N seconds until someone acknowledges it in the app, for at most 3 hours.</p>
+  </fieldset>
+  <fieldset><legend>Certificate digest</legend>
+    <label class="check"><input type="checkbox" name="cert_digest" value="1" {{if $s.CertDigest}}checked{{end}}> Also push the daily list of certificates that expire within {{$d.CertDays}} days, at {{printf "%02d:00" $d.DigestHour}}</label>
+    <p class="muted small">The number of days and the hour are set under <a href="/admin/email">Email</a>.</p>
+  </fieldset>
+</section>
+</div>
+
+<div class="grid2 email-bottom">
+<section class="card">
+  <h2>Send a test message</h2>
+  <p class="muted small">Uses the values in this form without saving them.</p>
+  <div class="form-actions"><button class="btn" formaction="/admin/pushover/test">{{template "icon" "globe-out"}}<span>Send test</span></button></div>
+</section>
+<section class="card">
+  <h2>Recent messages</h2>
+  {{if .Data.Recent}}
+  <div class="table-wrap"><table class="table compact">
+    <thead><tr><th>When</th><th>Title</th><th>Result</th></tr></thead>
+    <tbody>{{range .Data.Recent}}<tr>
+      <td class="nowrap muted small">{{fmtTime .CreatedAt}}</td>
+      <td class="small">{{.Subject}}</td>
+      <td class="small">{{if .OK}}<span class="badge up">Sent</span>{{else}}<span class="badge down" title="{{.Error}}">Failed</span><div class="muted small ellipsis" title="{{.Error}}">{{.Error}}</div>{{end}}</td>
+    </tr>{{end}}</tbody>
+  </table></div>
+  {{else}}<p class="muted small">No push message has been sent yet.</p>{{end}}
+</section>
+</div>
+<div class="form-actions sticky-actions"><button class="btn primary">Save</button></div>
+</form>
+{{template "bottom" .}}

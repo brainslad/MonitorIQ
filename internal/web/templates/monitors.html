@@ -73,6 +73,9 @@
   </select>
   <input name="new_group" form="bulk" placeholder="Name of the new group" maxlength="80" data-bulk-new hidden aria-label="Name of the new group">
   <button class="btn primary small" type="submit" form="bulk" data-bulk-go disabled>Move</button>
+  <span class="bulk-sep" aria-hidden="true"></span>
+  <button class="btn small" type="submit" form="bulk" formaction="/admin/monitors/pushover" name="pushover" value="on" formnovalidate title="Send the selected monitors' alerts to the default Pushover key">Pushover on</button>
+  <button class="btn small" type="submit" form="bulk" formaction="/admin/monitors/pushover" name="pushover" value="off" formnovalidate title="Stop sending the selected monitors' alerts to the default Pushover key">Pushover off</button>
   <button class="btn ghost small" type="button" data-bulk-clear>Clear</button>
 </div>
 {{template "bottom" .}}

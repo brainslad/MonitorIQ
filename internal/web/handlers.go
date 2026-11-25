@@ -727,6 +727,8 @@ func (s *Server) monitorFormData(r *http.Request, m *store.Monitor) (map[string]
 		st := s.emailSettings(r.Context())
 		subs, _ := s.Store.AlertSubscribers(r.Context())
 		data["Email"] = map[string]any{"Enabled": st.Enabled, "Recipients": st.Recipients, "Subscribers": len(subs)}
+		ps := s.pushoverSettings(r.Context())
+		data["Pushover"] = map[string]any{"Enabled": ps.Enabled, "HasDefault": ps.UserKey != ""}
 	}
 	return data, nil
 }
@@ -742,6 +744,9 @@ func (s *Server) handleMonitorForm(w http.ResponseWriter, r *http.Request) {
 	} else {
 		m.HostID, _ = strconv.ParseInt(r.URL.Query().Get("host"), 10, 64)
 		m.GroupID, _ = strconv.ParseInt(r.URL.Query().Get("group"), 10, 64)
+		if s.Notifier != nil {
+			m.Pushover = s.pushoverSettings(r.Context()).NewMonitors
+		}
 		if t := r.URL.Query().Get("type"); checks.ValidType(t) {
 			m.Type = t
 		}
@@ -775,6 +780,8 @@ func monitorFromForm(r *http.Request, id int64) *store.Monitor {
 		Enabled:         formBool(r, "enabled"),
 		AlertEmails:     r.PostFormValue("alert_emails"),
 		AlertsMuted:     formBool(r, "alerts_muted"),
+		Pushover:        formBool(r, "pushover"),
+		PushoverKeys:    r.PostFormValue("pushover_keys"),
 	}
 	c := checks.Config{}
 	switch m.Type {

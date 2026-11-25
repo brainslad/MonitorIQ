@@ -114,6 +114,10 @@ type Monitor struct {
 	AlertEmails string
 	// AlertsMuted turns off e-mail alerts for this monitor.
 	AlertsMuted bool
+	// Pushover sends this monitor's alerts to the default Pushover key.
+	Pushover bool
+	// PushoverKeys are extra Pushover user or group keys for this monitor (comma separated).
+	PushoverKeys string
 }
 
 // EffectiveTarget is the monitor target, falling back to the host address.
@@ -148,7 +152,7 @@ func (m *Monitor) DisplayStatus() checks.Status {
 
 const monitorCols = `m.id, m.host_id, h.name, h.address, m.name, m.type, m.target, m.port, m.interval_seconds,
 	m.timeout_seconds, m.retries, m.enabled, m.config, m.status, m.last_checked_at, m.last_latency_ms,
-	m.last_message, m.consecutive_failures, m.status_changed_at, m.created_at, m.alert_emails, m.alerts_muted,
+	m.last_message, m.consecutive_failures, m.status_changed_at, m.created_at, m.alert_emails, m.alerts_muted, m.pushover, m.pushover_keys,
 	COALESCE(m.group_id, 0), COALESCE(g.name, ''), COALESCE(g.color, '')`
 
 const monitorFrom = ` FROM monitors m JOIN hosts h ON h.id = m.host_id LEFT JOIN monitor_groups g ON g.id = m.group_id `
@@ -158,7 +162,7 @@ func scanMonitor(r pgx.Row) (Monitor, error) {
 	var cfg []byte
 	err := r.Scan(&m.ID, &m.HostID, &m.HostName, &m.HostAddress, &m.Name, &m.Type, &m.Target, &m.Port,
 		&m.IntervalSeconds, &m.TimeoutSeconds, &m.Retries, &m.Enabled, &cfg, &m.Status, &m.LastCheckedAt,
-		&m.LastLatencyMs, &m.LastMessage, &m.ConsecutiveFailures, &m.StatusChangedAt, &m.CreatedAt, &m.AlertEmails, &m.AlertsMuted,
+		&m.LastLatencyMs, &m.LastMessage, &m.ConsecutiveFailures, &m.StatusChangedAt, &m.CreatedAt, &m.AlertEmails, &m.AlertsMuted, &m.Pushover, &m.PushoverKeys,
 		&m.GroupID, &m.GroupName, &m.GroupColor)
 	if err == nil && len(cfg) > 0 {
 		_ = json.Unmarshal(cfg, &m.Config)
@@ -230,6 +234,11 @@ func ValidateMonitor(m *Monitor) error {
 		return err
 	}
 	m.AlertEmails = emails
+	keys, err := NormalizePushoverKeys(m.PushoverKeys)
+	if err != nil {
+		return err
+	}
+	m.PushoverKeys = keys
 	if m.Type == checks.TypeDNS {
 		switch strings.ToUpper(m.Config.RecordType) {
 		case "", "A", "AAAA", "CNAME", "MX", "TXT", "NS":
@@ -257,18 +266,20 @@ func (s *Store) SaveMonitor(ctx context.Context, m *Monitor) error {
 	}
 	if m.ID == 0 {
 		return s.Pool.QueryRow(ctx, `INSERT INTO monitors (host_id, name, type, target, port, interval_seconds,
-			timeout_seconds, retries, enabled, config, alert_emails, alerts_muted, group_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+			timeout_seconds, retries, enabled, config, alert_emails, alerts_muted, group_id, pushover, pushover_keys)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
 			m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg,
-			m.AlertEmails, m.AlertsMuted, group).Scan(&m.ID)
+			m.AlertEmails, m.AlertsMuted, group, m.Pushover, m.PushoverKeys).Scan(&m.ID)
 	}
 	// Changing what is being checked resets the state so stale status is not shown.
 	_, err := s.Pool.Exec(ctx, `UPDATE monitors SET
 		status = CASE WHEN type <> $3 OR target <> $4 OR port <> $5 OR host_id <> $1 THEN 0 ELSE status END,
 		consecutive_failures = CASE WHEN type <> $3 OR target <> $4 OR port <> $5 OR host_id <> $1 THEN 0 ELSE consecutive_failures END,
 		host_id=$1, name=$2, type=$3, target=$4, port=$5, interval_seconds=$6, timeout_seconds=$7, retries=$8,
-		enabled=$9, config=$10, alert_emails=$12, alerts_muted=$13, group_id=$14, last_checked_at = NULL WHERE id=$11`,
+		enabled=$9, config=$10, alert_emails=$12, alerts_muted=$13, group_id=$14, pushover=$15, pushover_keys=$16,
+		last_checked_at = NULL WHERE id=$11`,
 		m.HostID, m.Name, m.Type, m.Target, m.Port, m.IntervalSeconds, m.TimeoutSeconds, m.Retries, m.Enabled, cfg, m.ID,
-		m.AlertEmails, m.AlertsMuted, group)
+		m.AlertEmails, m.AlertsMuted, group, m.Pushover, m.PushoverKeys)
 	return err
 }
 
