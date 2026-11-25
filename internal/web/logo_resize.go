@@ -16,16 +16,18 @@ import (
 )
 
 // A stored raster logo fits in this box (about three times the size it is
-// shown at, so it stays sharp on high-density screens).
+// shown at, so it stays sharp on high-density screens). The compact-menu
+// logo is shown in a 38 px square.
 const (
 	logoMaxW = 600
 	logoMaxH = 150
+	miniMax  = 152
 )
 
-// fitLogo shrinks a PNG, JPEG or GIF logo that is larger than the logo box,
+// fitLogo shrinks a PNG, JPEG or GIF logo that is larger than maxW×maxH,
 // keeping its proportions, and returns it as PNG. Smaller images, SVG and
 // WebP (no decoder in the standard library) are returned unchanged.
-func fitLogo(data []byte, ct string) ([]byte, string, error) {
+func fitLogo(data []byte, ct string, maxW, maxH int) ([]byte, string, error) {
 	switch ct {
 	case "image/png", "image/jpeg", "image/gif":
 	default:
@@ -38,7 +40,7 @@ func fitLogo(data []byte, ct string) ([]byte, string, error) {
 	if cfg.Width > 8000 || cfg.Height > 8000 {
 		return nil, "", errors.New("the logo is too large: at most 8000 × 8000 pixels")
 	}
-	w, h := fitBox(cfg.Width, cfg.Height, logoMaxW, logoMaxH)
+	w, h := fitBox(cfg.Width, cfg.Height, maxW, maxH)
 	if w == cfg.Width && h == cfg.Height {
 		return data, ct, nil
 	}

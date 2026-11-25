@@ -111,8 +111,9 @@ func (s *Server) Handler() http.Handler {
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
 	mux.Handle("GET /static/", staticCache(noListing(fileServer)))
 	mux.HandleFunc("GET /healthz", s.handleHealth)
-	mux.HandleFunc("GET /branding/logo", s.handleLogo(false))
-	mux.HandleFunc("GET /branding/logo-dark", s.handleLogo(true))
+	mux.HandleFunc("GET /branding/logo", s.handleLogo("light"))
+	mux.HandleFunc("GET /branding/logo-dark", s.handleLogo("dark"))
+	mux.HandleFunc("GET /branding/logo-mini", s.handleLogo("mini"))
 
 	// Public
 	mux.HandleFunc("GET /status/{slug}", s.handlePublicStatus)
@@ -195,8 +196,8 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
 	auth("GET /admin/branding", s.handleBrandingForm)
-	mux.Handle("POST /admin/branding", s.limitBody(2*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
-	mux.Handle("POST /admin/branding/reset-logo", s.limitBody(2*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleLogoReset)))
+	mux.Handle("POST /admin/branding", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
+	mux.Handle("POST /admin/branding/reset-logo", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleLogoReset)))
 	auth("GET /admin/geo", s.handleGeoSettings)
 	auth("POST /admin/geo", s.handleGeoSettingsSave)
 	auth("POST /admin/geo/update", s.handleGeoUpdate)
