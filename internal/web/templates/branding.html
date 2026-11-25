@@ -2,9 +2,16 @@
 <div class="page-head"><h1>Settings</h1></div>
 {{template "settings-tabs" "branding"}}
 <div class="grid2">
-<form class="card form" method="post" action="/admin/branding" data-branding-form>
-  <h2>Footer</h2>
+<form class="card form" method="post" action="/admin/branding" enctype="multipart/form-data" data-branding-form>
+  <h2>Logo and footer</h2>
   {{template "csrf" .CSRF}}
+  <fieldset><legend>Logo</legend>
+    <p class="muted small">Replaces the MonitorIQ logo in the menu and on the sign-in page. The slogan “{{.Data.Slogan}}” stays underneath. PNG, JPEG, GIF, WebP or SVG, up to {{.Data.MaxKB}} KB; a wide image about 40 px high works best.</p>
+    <label>Logo{{if $b.Logo}} <span class="muted small">(choose a file to replace it)</span>{{end}}<input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="light"></label>
+    {{if $b.Logo}}<label class="check"><input type="checkbox" name="remove_logo" value="1"> Remove the logo and go back to the MonitorIQ logo</label>{{end}}
+    <label>Logo for the dark theme <span class="muted small">(optional: a light version of the logo)</span><input type="file" name="logo_dark" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="dark"></label>
+    {{if $b.LogoDark}}<label class="check"><input type="checkbox" name="remove_logo_dark" value="1"> Remove the dark theme logo</label>{{end}}
+  </fieldset>
   <fieldset><legend>Footer</legend>
     <label>Footer line<input name="footer" maxlength="{{.Data.MaxFooter}}" value="{{$b.FooterLine}}" placeholder="{{.Data.Slogan}}" data-footer-input></label>
     <p class="muted small m0">Shown after “MonitorIQ by Brainslad” at the bottom of every page. Leave empty for “{{.Data.Slogan}}”. The author credit itself always stays (licence term, see NOTICE).</p>
@@ -13,7 +20,17 @@
 </form>
 <section class="card">
   <h2>Preview</h2>
-  <p class="muted small">How the footer will look.</p>
+  <p class="muted small">How the menu and the footer will look.</p>
+  <div class="brand-preview">
+    <div class="bp-pane bp-light">
+      <span class="bp-label small muted">Light theme</span>
+      <div class="brand{{if $b.Logo}} custom{{end}}" data-preview="light">{{template "brand-mark" $b}}</div>
+    </div>
+    <div class="bp-pane bp-dark">
+      <span class="bp-label small">Dark theme</span>
+      <div class="brand{{if $b.Logo}} custom{{end}}" data-preview="dark">{{template "brand-mark" $b}}</div>
+    </div>
+  </div>
   <p class="footer muted small bp-footer">{{template "credit" .Version}} · <span data-footer-preview>{{$b.FooterLine}}</span></p>
 </section>
 </div>

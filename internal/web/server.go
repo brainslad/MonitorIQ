@@ -111,6 +111,8 @@ func (s *Server) Handler() http.Handler {
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
 	mux.Handle("GET /static/", cacheFor(24*time.Hour, noListing(fileServer)))
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /branding/logo", s.handleLogo(false))
+	mux.HandleFunc("GET /branding/logo-dark", s.handleLogo(true))
 
 	// Public
 	mux.HandleFunc("GET /status/{slug}", s.handlePublicStatus)
@@ -191,7 +193,7 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
 	auth("GET /admin/branding", s.handleBrandingForm)
-	auth("POST /admin/branding", s.handleBrandingSave)
+	mux.Handle("POST /admin/branding", s.limitBody(2*MaxLogoBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
 	auth("GET /admin/geo", s.handleGeoSettings)
 	auth("POST /admin/geo", s.handleGeoSettingsSave)
 	auth("POST /admin/geo/update", s.handleGeoUpdate)

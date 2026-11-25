@@ -248,6 +248,36 @@
   if (bf) {
     var fi = bf.querySelector("[data-footer-input]"), fp = document.querySelector("[data-footer-preview]");
     if (fi && fp) fi.addEventListener("input", function () { fp.textContent = fi.value.trim() || fi.getAttribute("placeholder"); });
+    var showLogo = function (which, url) {
+      document.querySelectorAll('[data-preview]').forEach(function (box) {
+        var mode = box.getAttribute("data-preview");
+        if (which === "light" && mode === "dark" && box.getAttribute("data-dark-set") === "1") return;
+        if (which === "dark" && mode !== "dark") return;
+        var sub = box.querySelector(".brand-sub");
+        var slogan = sub ? sub.textContent : "";
+        box.textContent = "";
+        box.className = "brand custom";
+        var text = document.createElement("span"); text.className = "brand-text";
+        var lg = document.createElement("span"); lg.className = "brand-logo";
+        var img = document.createElement("img"); img.src = url; img.alt = "Logo";
+        lg.appendChild(img); text.appendChild(lg);
+        var s2 = document.createElement("span"); s2.className = "brand-sub"; s2.textContent = slogan;
+        text.appendChild(s2); box.appendChild(text);
+        if (which === "dark") box.setAttribute("data-dark-set", "1");
+      });
+    };
+    bf.querySelectorAll("[data-logo-input]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        if (!f) return;
+        if (f.size > 512 * 1024) { inp.value = ""; inp.setCustomValidity("The logo can be at most 512 KB."); inp.reportValidity(); return; }
+        inp.setCustomValidity("");
+        // A data: URL, because the page's CSP does not allow blob: images.
+        var rd = new FileReader();
+        rd.onload = function () { showLogo(inp.getAttribute("data-logo-input"), rd.result); };
+        rd.readAsDataURL(f);
+      });
+    });
   }
 
   // ---------------------------------------------------------------- auto refresh (dashboard)
