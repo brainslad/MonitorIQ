@@ -134,7 +134,9 @@ code,.mono,kbd{font-family:var(--font)}
 .sb-user-text strong{font-weight:600;font-size:.92em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-user-text small{color:var(--muted);font-size:.78em}
 .sb-overlay{display:none}
-.sb-open{display:none}
+/* the menu button only shows when the menu is off-screen (narrow windows);
+   ".icon-btn" sets display too, hence the two classes */
+.icon-btn.sb-menu{display:none}
 :root.sb-collapsed .sidebar{width:78px}
 :root.sb-collapsed .sidebar .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,
 :root.sb-collapsed .sb-live-text,:root.sb-collapsed .sb-user-text,:root.sb-collapsed .sb-user form{display:none}
@@ -175,7 +177,7 @@ kbd{font-size:.72em;padding:2px 7px;border-radius:6px;border:1px solid var(--bor
   :root.sb-collapsed .sidebar .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,:root.sb-collapsed .sb-live-text,:root.sb-collapsed .sb-user-text{display:revert}
   :root.sb-open .sidebar{transform:none}
   :root.sb-open .sb-overlay{display:block;position:fixed;inset:0;background:rgba(10,16,19,.35);z-index:20}
-  .sb-open{display:grid}
+  .icon-btn.sb-menu{display:grid}
   .sb-collapse{display:none}
   .main{padding:0 16px 20px}
 }
