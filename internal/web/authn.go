@@ -592,15 +592,43 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 			s.flash(w, r, "/admin/users", false, "Passwords do not match.")
 			return
 		}
-		_, err = s.Store.CreateUser(r.Context(), username, r.PostFormValue("password"))
+		_, err = s.Store.CreateUserNamed(r.Context(), username, r.PostFormValue("display_name"), r.PostFormValue("password"))
 	} else {
-		_, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", "")
+		var name string
+		if name, err = store.CleanDisplayName(r.PostFormValue("display_name")); err == nil {
+			var u *store.User
+			if u, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", ""); err == nil && name != "" {
+				err = s.Store.SetDisplayName(r.Context(), u.ID, name)
+			}
+		}
 	}
 	if err != nil {
 		s.flash(w, r, "/admin/users", false, capitalize(err.Error())+".")
 		return
 	}
 	s.flash(w, r, "/admin/users", true, "User created.")
+}
+
+// handleUserRename sets another user's display name (administration).
+func (s *Server) handleUserRename(w http.ResponseWriter, r *http.Request) {
+	if err := s.Store.SetDisplayName(r.Context(), pathID(r), r.PostFormValue("display_name")); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		s.flash(w, r, "/admin/users", false, capitalize(err.Error())+".")
+		return
+	}
+	s.flash(w, r, "/admin/users", true, "Display name saved.")
+}
+
+// handleAccountName sets the signed-in user's own display name.
+func (s *Server) handleAccountName(w http.ResponseWriter, r *http.Request) {
+	if err := s.Store.SetDisplayName(r.Context(), userFrom(r).ID, r.PostFormValue("display_name")); err != nil {
+		s.flash(w, r, "/account", false, capitalize(err.Error())+".")
+		return
+	}
+	s.flash(w, r, "/account", true, "Display name saved.")
 }
 
 func (s *Server) handleUserReset2FA(w http.ResponseWriter, r *http.Request) {

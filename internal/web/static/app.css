@@ -720,3 +720,13 @@ body.has-bulk main{padding-bottom:90px}
 .export-pick .search{margin-top:4px}
 .export-form .check > span{line-height:1.45}
 .btn.busy{opacity:.7;pointer-events:none}
+
+/* inline display-name editing */
+.inline-edit{margin-top:4px}
+.inline-edit summary{cursor:pointer;color:var(--accent);list-style:none;display:inline}
+.inline-edit summary::-webkit-details-marker{display:none}
+.inline-edit[open] summary{color:var(--muted)}
+.inline-form{display:flex;gap:6px;align-items:center;margin:6px 0 4px}
+.inline-form input{flex:1;min-width:0}
+.inline-form input{padding:6px 10px;border:1px solid var(--border2);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:.9em}
+.form .inline-form input{margin-top:0}

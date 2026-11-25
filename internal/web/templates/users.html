@@ -7,7 +7,15 @@
     <thead><tr><th>User</th><th>Sign-in</th><th>2FA</th><th>Last login</th><th></th></tr></thead>
     <tbody>
     {{range .Data.Users}}
-    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}{{if .DisplayName}}<div class="muted small">{{.DisplayName}}{{if .Email}} · {{.Email}}{{end}}</div>{{end}}</td>
+    <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}
+      <div class="muted small">{{if .DisplayName}}{{.DisplayName}}{{else}}<em>No display name</em>{{end}}{{if .Email}} · {{.Email}}{{end}}</div>
+      <details class="inline-edit"><summary class="small">Edit display name</summary>
+        <form method="post" action="/admin/users/{{.ID}}/name" class="inline-form">{{template "csrf" $csrf}}
+          <input name="display_name" value="{{.DisplayName}}" maxlength="80" placeholder="e.g. Jane Doe" aria-label="Display name for {{.Username}}">
+          <button class="btn small primary">Save</button>
+        </form>
+        <p class="muted small m0">Shown in the menu and in the dashboard greeting. Leave empty to use {{if eq .Source "local"}}the username{{else}}the name from the directory{{end}}.</p>
+      </details></td>
     <td>{{template "source" .Source}}{{if and (ne .Source "local") (not .ExternalID)}} <span class="muted small" title="Linked at the first sign-in">pending</span>{{end}}</td>
     <td>{{if .TOTPEnabled}}<span class="badge up">ON</span>{{else if eq .Source "oidc"}}<span class="muted small">via IdP</span>{{else}}<span class="badge{{if $.Data.Require2FA}} degraded{{end}}">OFF</span>{{end}}</td>
     <td class="small muted">{{fmtTime .LastLoginAt}}</td>
@@ -32,6 +40,7 @@
   </select></label>
   {{end}}
   <label>Username<input name="username" required autocomplete="off"></label>
+  <label>Display name <span class="muted small">(optional, shown in the greeting)</span><input name="display_name" maxlength="80" placeholder="e.g. Jane Doe" autocomplete="off"></label>
   <div data-local-only>
   <label>Password <span class="muted small">(min. 8 characters)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
   <label>Repeat password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
