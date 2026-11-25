@@ -51,6 +51,39 @@ type User struct {
 	EmailAlerts bool
 	// CustomName is set when the display name was chosen in MonitorIQ.
 	CustomName bool
+	Role       string // RoleAdmin or RoleViewer
+}
+
+// User roles.
+const (
+	// RoleAdmin manages everything: monitors, hosts, groups, status pages,
+	// users and settings.
+	RoleAdmin = "admin"
+	// RoleViewer only looks: the dashboard, monitors, reports and exports,
+	// and manages their own account.
+	RoleViewer = "viewer"
+)
+
+// IsAdmin reports whether the user may change the configuration.
+func (u *User) IsAdmin() bool { return u != nil && u.Role == RoleAdmin }
+
+// RoleLabel is the role as shown in the interface.
+func (u *User) RoleLabel() string {
+	if u.IsAdmin() {
+		return "Administrator"
+	}
+	return "Read-only"
+}
+
+// CleanRole checks a role from a form ("" is a viewer).
+func CleanRole(role string) (string, error) {
+	switch role {
+	case RoleAdmin, RoleViewer:
+		return role, nil
+	case "":
+		return RoleViewer, nil
+	}
+	return "", errors.New("invalid role")
 }
 
 // IsLocal reports whether the user signs in with a password stored here.
@@ -85,12 +118,12 @@ func (u *User) Label() string {
 	return u.Username
 }
 
-const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled, u.email_alerts, u.display_name_custom`
+const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled, u.email_alerts, u.display_name_custom, u.role`
 
 func scanUser(r pgx.Row, extra ...any) (*User, error) {
 	var u User
 	dest := append([]any{&u.ID, &u.Username, &u.CreatedAt, &u.LastLoginAt, &u.Source, &u.ExternalID,
-		&u.DisplayName, &u.Email, &u.TOTPEnabled, &u.EmailAlerts, &u.CustomName}, extra...)
+		&u.DisplayName, &u.Email, &u.TOTPEnabled, &u.EmailAlerts, &u.CustomName, &u.Role}, extra...)
 	if err := r.Scan(dest...); err != nil {
 		return nil, notFound(err)
 	}
@@ -112,16 +145,21 @@ func uniqueErr(err error) error {
 	return err
 }
 
-// CreateUser creates a local user with a password.
+// CreateUser creates a local administrator with a password.
 func (s *Store) CreateUser(ctx context.Context, username, password string) (int64, error) {
-	return s.CreateUserNamed(ctx, username, "", password)
+	return s.CreateUserNamed(ctx, username, "", password, RoleAdmin)
 }
 
-// CreateUserNamed creates a local user with a password and a display name.
-func (s *Store) CreateUserNamed(ctx context.Context, username, displayName, password string) (int64, error) {
+// CreateUserNamed creates a local user with a password, a display name and
+// a role ("" is a viewer).
+func (s *Store) CreateUserNamed(ctx context.Context, username, displayName, password, role string) (int64, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return 0, errors.New("username is required")
+	}
+	role, err := CleanRole(role)
+	if err != nil {
+		return 0, err
 	}
 	h, err := hashPassword(password)
 	if err != nil {
@@ -132,23 +170,28 @@ func (s *Store) CreateUserNamed(ctx context.Context, username, displayName, pass
 		return 0, err
 	}
 	var id int64
-	err = s.Pool.QueryRow(ctx, `INSERT INTO users (username, password_hash, display_name, display_name_custom)
-		VALUES ($1,$2,$3,$3 <> '') RETURNING id`, username, h, displayName).Scan(&id)
+	err = s.Pool.QueryRow(ctx, `INSERT INTO users (username, password_hash, display_name, display_name_custom, role)
+		VALUES ($1,$2,$3,$3 <> '',$4) RETURNING id`, username, h, displayName, role).Scan(&id)
 	return id, uniqueErr(err)
 }
 
 // CreateExternalUser pre-registers (externalID empty) or provisions a user
-// that signs in through LDAP or OpenID Connect.
-func (s *Store) CreateExternalUser(ctx context.Context, source, username, externalID, displayName, email string) (*User, error) {
+// that signs in through LDAP or OpenID Connect. Accounts created at the
+// first sign-in get role "" and so are viewers.
+func (s *Store) CreateExternalUser(ctx context.Context, source, username, externalID, displayName, email, role string) (*User, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return nil, errors.New("username is required")
 	}
+	role, err := CleanRole(role)
+	if err != nil {
+		return nil, err
+	}
 	if source != SourceLDAP && source != SourceOIDC {
 		return nil, errors.New("invalid authentication source")
 	}
-	u, err := scanUser(s.Pool.QueryRow(ctx, `INSERT INTO users AS u (username, password_hash, auth_source, external_id, display_name, email)
-		VALUES ($1,'',$2,$3,$4,$5) RETURNING `+userCols, username, source, externalID, displayName, email))
+	u, err := scanUser(s.Pool.QueryRow(ctx, `INSERT INTO users AS u (username, password_hash, auth_source, external_id, display_name, email, role)
+		VALUES ($1,'',$2,$3,$4,$5,$6) RETURNING `+userCols, username, source, externalID, displayName, email, role))
 	return u, uniqueErr(err)
 }
 
@@ -245,13 +288,14 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (*User, 
 		ORDER BY (username=$1) DESC LIMIT 1`, strings.TrimSpace(username)))
 }
 
-// SetPasswordByUsername sets (or creates) a local user with the given password.
+// SetPasswordByUsername sets (or creates) a local user with the given
+// password. It is the command-line way in, so a new user is an administrator.
 func (s *Store) SetPasswordByUsername(ctx context.Context, username, password string) error {
 	h, err := hashPassword(password)
 	if err != nil {
 		return err
 	}
-	tag, err := s.Pool.Exec(ctx, `INSERT INTO users (username, password_hash) VALUES ($1,$2)
+	tag, err := s.Pool.Exec(ctx, `INSERT INTO users (username, password_hash, role) VALUES ($1,$2,'admin')
 		ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash WHERE users.auth_source='local'`, username, h)
 	if err != nil {
 		return err
@@ -315,6 +359,10 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	})
 }
 
+// errLastAdmin keeps at least one administrator, so the configuration can
+// always be changed from the interface.
+var errLastAdmin = errors.New("the last administrator cannot be removed or made read-only")
+
 func (s *Store) DeleteUser(ctx context.Context, id int64) error {
 	var n int
 	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM users`).Scan(&n); err != nil {
@@ -323,7 +371,39 @@ func (s *Store) DeleteUser(ctx context.Context, id int64) error {
 	if n <= 1 {
 		return errors.New("the last user cannot be deleted")
 	}
-	_, err := s.Pool.Exec(ctx, `DELETE FROM users WHERE id=$1`, id)
+	tag, err := s.Pool.Exec(ctx, `DELETE FROM users WHERE id=$1 AND (role <> 'admin'
+		OR (SELECT count(*) FROM users WHERE role='admin') > 1)`, id)
+	if err == nil && tag.RowsAffected() == 0 {
+		if _, gerr := s.GetUser(ctx, id); gerr != nil {
+			return gerr
+		}
+		return errLastAdmin
+	}
+	return err
+}
+
+// SetRole changes a user's role. The last administrator stays one. The
+// user's sessions end, so the new rights apply at once.
+func (s *Store) SetRole(ctx context.Context, id int64, role string) error {
+	if role != RoleAdmin && role != RoleViewer {
+		return errors.New("invalid role")
+	}
+	tag, err := s.Pool.Exec(ctx, `UPDATE users SET role=$2 WHERE id=$1 AND role <> $2
+		AND ($2 = 'admin' OR (SELECT count(*) FROM users WHERE role='admin') > 1)`, id, role)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		u, err := s.GetUser(ctx, id)
+		if err != nil {
+			return err
+		}
+		if u.Role == role {
+			return nil
+		}
+		return errLastAdmin
+	}
+	_, err = s.Pool.Exec(ctx, `DELETE FROM sessions WHERE user_id=$1`, id)
 	return err
 }
 
