@@ -6,10 +6,11 @@
   <h2>Logo and footer</h2>
   {{template "csrf" .CSRF}}
   <fieldset><legend>Logo</legend>
-    <p class="muted small">Replaces the MonitorIQ logo in the menu and on the sign-in page. The slogan “{{.Data.Slogan}}” stays underneath. PNG, JPEG or GIF up to {{.Data.MaxMB}} MB (shrunk automatically), or SVG or WebP up to 512 KB. Any size is shown at the logo height (40 px in the menu); a wide logo with little empty margin looks best.</p>
+    <p class="muted small">Replaces the MonitorIQ logo in the menu, on the sign-in page and on the status pages. The slogan “{{.Data.Slogan}}” stays underneath. PNG, JPEG or GIF up to {{.Data.MaxMB}} MB (shrunk automatically), or SVG or WebP up to 512 KB. Any size is shown at the logo height (40 px in the menu); a wide logo with little empty margin looks best.</p>
     <label>Logo{{if $b.Logo}} <span class="muted small">(choose a file to replace it)</span>{{end}}<input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="light"></label>
     <label>Logo for the dark theme <span class="muted small">(optional: a light version of the logo)</span><input type="file" name="logo_dark" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="dark"></label>
-    {{if or $b.Logo $b.LogoDark}}<div class="logo-reset">
+    <label>Logo for the compact menu <span class="muted small">(optional: a square symbol, shown at 38 × 38 px when the menu is collapsed; without it the logo is shrunk to fit)</span><input type="file" name="logo_mini" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="mini"></label>
+    {{if or $b.Logo $b.LogoDark $b.LogoMini}}<div class="logo-reset">
       <button class="btn small danger" formaction="/admin/branding/reset-logo" formnovalidate>Reset to the default logos</button>
       <span class="muted small">Removes the uploaded logos and shows the MonitorIQ logo again. The footer line is kept.</span>
     </div>{{end}}
@@ -27,10 +28,12 @@
     <div class="bp-pane bp-light">
       <span class="bp-label small muted">Light theme</span>
       <div class="brand{{if $b.Logo}} custom{{end}}" data-preview="light">{{template "brand-mark" $b}}</div>
+      <div class="bp-mini"><span class="bp-label small muted">Compact menu</span><span class="bp-mini-box" data-mini-preview>{{with $b.LogoMiniURL}}<img src="{{.}}" alt="">{{else}}{{with $b.LogoURL}}<img class="fit" src="{{.}}" alt="">{{else}}<span class="logo"><img src="{{asset "favicon.svg"}}" alt="" width="20" height="20"></span>{{end}}{{end}}</span></div>
     </div>
     <div class="bp-pane bp-dark">
       <span class="bp-label small">Dark theme</span>
       <div class="brand{{if $b.Logo}} custom{{end}}" data-preview="dark">{{template "brand-mark" $b}}</div>
+      <div class="bp-mini"><span class="bp-label small">Compact menu</span><span class="bp-mini-box" data-mini-preview>{{with $b.LogoMiniURL}}<img src="{{.}}" alt="">{{else}}{{with $b.LogoDarkURL}}<img class="fit" src="{{.}}" alt="">{{else}}<span class="logo"><img src="{{asset "favicon.svg"}}" alt="" width="20" height="20"></span>{{end}}{{end}}</span></div>
     </div>
   </div>
   <div class="footer muted small bp-footer"><div class="footer-line" data-footer-preview{{if not $b.FooterLine}} hidden{{end}}>{{$b.FooterLine}}</div><div class="footer-credit">{{template "credit" .Version}}</div></div>

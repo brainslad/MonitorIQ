@@ -136,7 +136,7 @@ code,.mono,kbd{font-family:var(--font)}
 .sb-overlay{display:none}
 .sb-open{display:none}
 :root.sb-collapsed .sidebar{width:78px}
-:root.sb-collapsed .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,
+:root.sb-collapsed .sidebar .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,
 :root.sb-collapsed .sb-live-text,:root.sb-collapsed .sb-user-text,:root.sb-collapsed .sb-user form{display:none}
 :root.sb-collapsed .sb-section{font-size:0;padding:8px 0 4px}
 :root.sb-collapsed .sb-brand{flex-direction:column;gap:10px}
@@ -172,7 +172,7 @@ kbd{font-size:.72em;padding:2px 7px;border-radius:6px;border:1px solid var(--bor
 @media (max-width:1100px){
   .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-105%);transition:transform .2s;background:var(--surface);box-shadow:var(--shadow)}
   :root.sb-collapsed .sidebar{width:252px}
-  :root.sb-collapsed .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,:root.sb-collapsed .sb-live-text,:root.sb-collapsed .sb-user-text{display:revert}
+  :root.sb-collapsed .sidebar .brand-text,:root.sb-collapsed .sb-item span,:root.sb-collapsed .sb-badge,:root.sb-collapsed .sb-chev,:root.sb-collapsed .sb-live-text,:root.sb-collapsed .sb-user-text{display:revert}
   :root.sb-open .sidebar{transform:none}
   :root.sb-open .sb-overlay{display:block;position:fixed;inset:0;background:rgba(10,16,19,.35);z-index:20}
   .sb-open{display:grid}
@@ -756,10 +756,14 @@ body.has-bulk main{padding-bottom:90px}
 .brand.big .brand-logo img{height:56px;max-width:260px;margin:0 auto;object-position:center}
 .brand.big.custom .brand-text{text-align:center}
 .brand.custom .logo.mini{display:none;background:transparent;box-shadow:none;overflow:hidden}
-/* collapsed menu: the left end of the logo, where the symbol usually is */
-.brand.custom .logo.mini img{filter:none;width:38px;height:38px;object-fit:cover;object-position:left center}
-:root.sb-collapsed .brand.custom .logo.mini{display:grid}
-@media (max-width:1100px){:root.sb-collapsed .brand.custom .logo.mini{display:none}}
+/* collapsed menu: the compact logo, or else the whole logo shrunk to fit */
+.brand.custom .logo.mini img{filter:none;width:38px;height:38px;object-fit:contain;object-position:center}
+.bp-mini{display:flex;align-items:center;gap:10px}
+.bp-mini-box{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;overflow:hidden}
+.bp-mini-box img{width:38px;height:38px;object-fit:contain}
+.bp-mini-box .logo img{width:20px;height:20px}
+:root.sb-collapsed .sidebar .brand.custom .logo.mini{display:grid}
+@media (max-width:1100px){:root.sb-collapsed .sidebar .brand.custom .logo.mini{display:none}}
 .for-dark{display:none!important}
 :root[data-theme="dark"] .for-dark{display:block!important}:root[data-theme="dark"] .for-light{display:none!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .for-dark{display:block!important}:root:not([data-theme="light"]) .for-light{display:none!important}}

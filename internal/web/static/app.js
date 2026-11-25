@@ -327,7 +327,19 @@
         inp.setCustomValidity("");
         // A data: URL, because the page's CSP does not allow blob: images.
         var rd = new FileReader();
-        rd.onload = function () { showLogo(inp.getAttribute("data-logo-input"), rd.result); };
+        rd.onload = function () {
+          var which = inp.getAttribute("data-logo-input");
+          if (which === "mini") {
+            document.querySelectorAll("[data-mini-preview]").forEach(function (box) {
+              box.textContent = "";
+              var img = document.createElement("img"); img.src = rd.result; img.alt = "";
+              box.appendChild(img);
+              box.setAttribute("data-mini-set", "1");
+            });
+            return;
+          }
+          showLogo(which, rd.result);
+        };
         rd.readAsDataURL(f);
       });
     });
