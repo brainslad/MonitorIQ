@@ -195,7 +195,7 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
 	auth("GET /admin/branding", s.handleBrandingForm)
-	mux.Handle("POST /admin/branding", s.limitBody(2*MaxLogoBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
+	mux.Handle("POST /admin/branding", s.limitBody(2*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
 	auth("GET /admin/geo", s.handleGeoSettings)
 	auth("POST /admin/geo", s.handleGeoSettingsSave)
 	auth("POST /admin/geo/update", s.handleGeoUpdate)
