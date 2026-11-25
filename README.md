@@ -291,6 +291,10 @@ Open **Export** in the sidebar (or **Export** on a monitor's page, which picks t
 
 Summary, daily and hourly figures come from the hourly aggregates, so they reach back as far as that retention (730 days by default). *Every check* reads the raw results, which are kept for less time (90 days by default); one export holds at most 3,000,000 checks and moves to a new sheet every 1,048,575 rows, Excel's limit. Uptime is `(up + degraded) / checks`, the same as on the dashboard; downtime is the time a monitor spent *down* within the period. Dates are real Excel dates and figures are numbers, so the sheets can be sorted, filtered and charted straight away. Two exports run at a time at most.
 
+### Customising the dashboard
+
+- **Display name:** each user can set a display name under **My account**, and administrators can set it under **Users** (also when creating a user). It is shown in the menu and in the dashboard greeting ("Good morning, Jane Doe"). Without one, the greeting uses the first part of the username. A name set in MonitorIQ is kept when LDAP or SSO report another one at sign-in.
+
 ### Command line
 
 ```bash
