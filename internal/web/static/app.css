@@ -846,3 +846,6 @@ button.chip-select:hover,button.chip-select[aria-expanded="true"]{color:var(--te
 
 /* reset to the default logos (Settings → Branding) */
 .logo-reset{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:10px;margin-top:4px;border-top:1px dashed var(--border)}
+
+/* users: role picker in the table */
+.role-form select{font:inherit;font-size:.85em;padding:4px 8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text)}

@@ -8,15 +8,15 @@
   </div>
   <div class="hello-actions">
     <a class="btn" href="/admin/status-pages">{{template "icon" "globe-out"}}<span>Status pages</span></a>
-    <a class="btn primary" href="/admin/monitors/new">{{template "icon" "plus"}}<span>New monitor</span></a>
+    {{if $.User.IsAdmin}}<a class="btn primary" href="/admin/monitors/new">{{template "icon" "plus"}}<span>New monitor</span></a>{{end}}
   </div>
 </section>
 
 {{if not $d.Monitors}}
 <section class="card empty">
   <h2>Nothing is being monitored yet</h2>
-  <p class="muted">Create a <a href="/admin/hosts/new">host</a> and add monitors to it: HTTP/HTTPS, ping, traceroute, DNS, SMTP, TLS certificates or any TCP port.</p>
-  <a class="btn primary" href="/admin/hosts/new">{{template "icon" "plus"}}<span>New host</span></a>
+  {{if $.User.IsAdmin}}<p class="muted">Create a <a href="/admin/hosts/new">host</a> and add monitors to it: HTTP/HTTPS, ping, traceroute, DNS, SMTP, TLS certificates or any TCP port.</p>
+  <a class="btn primary" href="/admin/hosts/new">{{template "icon" "plus"}}<span>New host</span></a>{{else}}<p class="muted">An administrator has not added any monitors yet.</p>{{end}}
 </section>
 {{else}}
 <section class="dash-top">
@@ -62,7 +62,7 @@
     </div>
     <div class="seg-labels"><span>Operational {{$k.Up}}</span><span>Degraded {{$k.Degraded}}</span><span>Down {{$k.Down}}</span><span>Paused {{$k.Paused}}</span></div>
     <ul class="host-rows">
-      {{range $d.Hosts}}<li><a href="/admin/hosts/{{.ID}}/edit"><span>{{.Name}} <small>· {{.Monitors}} {{if eq .Monitors 1}}monitor{{else}}monitors{{end}}{{if .Down}} · <b class="c-down">{{.Down}} down</b>{{end}}</small></span><strong>{{if ge .Uptime 0.0}}{{pctf .Uptime}}%{{else}}—{{end}}</strong></a></li>{{end}}
+      {{range $d.Hosts}}<li><a href="{{if $.User.IsAdmin}}/admin/hosts/{{.ID}}/edit{{else}}/admin/monitors?by=host{{end}}"><span>{{.Name}} <small>· {{.Monitors}} {{if eq .Monitors 1}}monitor{{else}}monitors{{end}}{{if .Down}} · <b class="c-down">{{.Down}} down</b>{{end}}</small></span><strong>{{if ge .Uptime 0.0}}{{pctf .Uptime}}%{{else}}—{{end}}</strong></a></li>{{end}}
     </ul>
     <div class="tiles">
       <a class="tile" href="#incidents">
@@ -185,7 +185,7 @@
     </ul>
     {{else}}
     <div class="card-head"><div><h2>Certificate renewal</h2><p class="muted small">TLS and HTTPS monitors</p></div></div>
-    <div class="cert-empty">{{template "icon" "lock"}}<p>No certificates are being watched yet.</p><a class="btn" href="/admin/monitors/new">{{template "icon" "plus"}}<span>Add a TLS monitor</span></a></div>
+    <div class="cert-empty">{{template "icon" "lock"}}<p>No certificates are being watched yet.</p>{{if $.User.IsAdmin}}<a class="btn" href="/admin/monitors/new">{{template "icon" "plus"}}<span>Add a TLS monitor</span></a>{{end}}</div>
     {{end}}
   </div>
 </section>
@@ -213,9 +213,9 @@
 <section class="card geo-dash" id="network-map">
   <div class="card-head">
     <div><h2>Network map</h2><p class="muted small">Where your monitors point, seen from {{$g.Probe.Label}}</p></div>
-    <a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "arrow"}}</a>
+    {{if $.User.IsAdmin}}<a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "arrow"}}</a>{{end}}
   </div>
-  {{if not $g.DB.Ready}}<div class="note small">Add a geolocation database to place targets on the map: <a href="/admin/geo">Settings → Geolocation</a> downloads the free DB-IP Lite edition.</div>{{end}}
+  {{if not $g.DB.Ready}}<div class="note small">{{if $.User.IsAdmin}}Add a geolocation database to place targets on the map: <a href="/admin/geo">Settings → Geolocation</a> downloads the free DB-IP Lite edition.{{else}}No geolocation database yet: an administrator can add one under Settings → Geolocation.{{end}}</div>{{end}}
   <div class="geo-wrap dash">
     <div class="geo-mapbox">{{template "geomap" $g.Map}}{{template "geo-legend" false}}
       {{with $g.Targets}}<ul class="geo-targets">

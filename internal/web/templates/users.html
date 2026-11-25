@@ -2,9 +2,10 @@
 <div class="page-head"><h1>Users</h1><a class="btn" href="/admin/auth">Authentication settings</a></div>
 <div class="grid2">
 <section class="card">
-  <h2>Accounts with back-office access</h2>
+  <h2>Accounts</h2>
+  <p class="muted small"><strong>Administrators</strong> manage monitors, hosts, groups, status pages, users and settings. <strong>Read-only</strong> users see the dashboard, monitors and reports, export to Excel and manage their own account.</p>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>User</th><th>Sign-in</th><th>2FA</th><th>Last login</th><th></th></tr></thead>
+    <thead><tr><th>User</th><th>Role</th><th>Sign-in</th><th>2FA</th><th>Last login</th><th></th></tr></thead>
     <tbody>
     {{range .Data.Users}}
     <tr><td><strong>{{.Username}}</strong>{{if eq64 .ID $me.ID}} <span class="muted small">(you)</span>{{end}}
@@ -16,6 +17,9 @@
         </form>
         <p class="muted small m0">Shown in the menu and in the dashboard greeting. Leave empty to use {{if eq .Source "local"}}the username{{else}}the name from the directory{{end}}.</p>
       </details></td>
+    <td>{{if eq64 .ID $me.ID}}<span class="badge{{if .IsAdmin}} up{{end}}">{{.RoleLabel}}</span>{{else}}<form method="post" action="/admin/users/{{.ID}}/role" class="inline-form role-form">{{template "csrf" $csrf}}
+      <select name="role" aria-label="Role of {{.Username}}" data-autosubmit><option value="admin"{{if .IsAdmin}} selected{{end}}>Administrator</option><option value="viewer"{{if not .IsAdmin}} selected{{end}}>Read-only</option></select>
+      <noscript><button class="btn small">Save</button></noscript></form>{{end}}</td>
     <td>{{template "source" .Source}}{{if and (ne .Source "local") (not .ExternalID)}} <span class="muted small" title="Linked at the first sign-in">pending</span>{{end}}</td>
     <td>{{if .TOTPEnabled}}<span class="badge up">ON</span>{{else if eq .Source "oidc"}}<span class="muted small">via IdP</span>{{else}}<span class="badge{{if $.Data.Require2FA}} degraded{{end}}">OFF</span>{{end}}</td>
     <td class="small muted">{{fmtTime .LastLoginAt}}</td>
@@ -41,6 +45,10 @@
   {{end}}
   <label>Username<input name="username" required autocomplete="off"></label>
   <label>Display name <span class="muted small">(optional, shown in the greeting)</span><input name="display_name" maxlength="80" placeholder="e.g. Jane Doe" autocomplete="off"></label>
+  <label>Role<select name="role">
+    <option value="viewer" selected>Read-only: sees the dashboard, monitors and reports</option>
+    <option value="admin">Administrator: manages everything</option>
+  </select></label>
   <div data-local-only>
   <label>Password <span class="muted small">(min. 8 characters)</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
   <label>Repeat password<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>

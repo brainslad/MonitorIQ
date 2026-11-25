@@ -1,5 +1,5 @@
 {{template "top" .}}{{$csrf := .CSRF}}{{$d := .Data}}
-<div class="page-head"><h1>Groups</h1><div class="actions"><a class="btn primary" href="/admin/groups/new">+ New group</a></div></div>
+<div class="page-head"><h1>Groups</h1><div class="actions">{{if $.User.IsAdmin}}<a class="btn primary" href="/admin/groups/new">+ New group</a>{{end}}</div></div>
 <p class="muted">A group gathers monitors, for example by service, team, customer or site, across hosts. Each monitor can be in one group.</p>
 {{if $d.Sections}}
 <div class="group-grid">
@@ -22,11 +22,11 @@
       {{range $i, $m := .Monitors}}{{if lt $i 5}}<li><a href="/monitors/{{$m.ID}}">{{template "dot" $m.DisplayStatus}}<span class="gl-name">{{$m.Name}}</span><small class="muted">{{$m.HostName}}</small></a></li>{{end}}{{end}}
       {{if gt (len .Monitors) 5}}<li class="muted small more"><a href="/admin/monitors?group={{.ID}}">and {{sub (len .Monitors) 5}} more</a></li>{{end}}
     </ul>
-    {{else}}<p class="muted small">No monitors yet. <a href="/admin/groups/{{.ID}}/edit">Choose monitors</a>.</p>{{end}}
+    {{else}}<p class="muted small">No monitors yet.{{if $.User.IsAdmin}} <a href="/admin/groups/{{.ID}}/edit">Choose monitors</a>.{{end}}</p>{{end}}
     <div class="gcard-actions">
       <a class="btn small" href="/admin/monitors?group={{.ID}}">Open</a>
-      <a class="btn small" href="/admin/groups/{{.ID}}/edit">Edit</a>
-      <form method="post" action="/admin/groups/{{.ID}}/delete" data-confirm="Delete group {{.Title}}? Its monitors are kept, without a group.">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
+      {{if $.User.IsAdmin}}<a class="btn small" href="/admin/groups/{{.ID}}/edit">Edit</a>
+      <form method="post" action="/admin/groups/{{.ID}}/delete" data-confirm="Delete group {{.Title}}? Its monitors are kept, without a group.">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>{{end}}
     </div>
   </section>
   {{end}}
@@ -40,8 +40,8 @@
 {{else}}
 <div class="card empty">
   <h2>No groups yet</h2>
-  <p class="muted">Create a group, for example "Web shop", "Customer A" or "Lisbon office", and choose the monitors that belong to it.</p>
-  <a class="btn primary" href="/admin/groups/new">+ New group</a>
+{{if $.User.IsAdmin}}  <p class="muted">Create a group, for example "Web shop", "Customer A" or "Lisbon office", and choose the monitors that belong to it.</p>
+  <a class="btn primary" href="/admin/groups/new">+ New group</a>{{end}}
 </div>
 {{end}}
 {{template "bottom" .}}

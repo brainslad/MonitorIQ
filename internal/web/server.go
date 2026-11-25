@@ -179,6 +179,7 @@ func (s *Server) Handler() http.Handler {
 	admin("POST /admin/users/{id}/delete", s.handleUserDelete)
 	admin("POST /admin/users/{id}/reset-2fa", s.handleUserReset2FA)
 	admin("POST /admin/users/{id}/name", s.handleUserRename)
+	admin("POST /admin/users/{id}/role", s.handleUserRole)
 	auth("POST /account/name", s.handleAccountName)
 
 	auth("GET /account", s.handleAccount)
