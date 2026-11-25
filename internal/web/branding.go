@@ -262,27 +262,20 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 	}
 	b.Footer = footer
 	for _, l := range []struct {
-		field, remove, key string
-		info               **logoInfo
-	}{{"logo", "remove_logo", logoKey, &b.Logo}, {"logo_dark", "remove_logo_dark", logoDarkKey, &b.LogoDark}} {
+		field, key string
+		info       **logoInfo
+	}{{"logo", logoKey, &b.Logo}, {"logo_dark", logoDarkKey, &b.LogoDark}} {
 		data, ct, err := readLogo(r, l.field)
 		if err != nil {
 			s.flash(w, r, "/admin/branding", false, capitalize(err.Error())+".")
 			return
 		}
-		switch {
-		case data != nil:
+		if data != nil {
 			if err := s.Store.SetSetting(ctx, l.key, base64.StdEncoding.EncodeToString(data)); err != nil {
 				s.serverError(w, err)
 				return
 			}
 			*l.info = &logoInfo{Type: ct, Sum: logoSum(data)}
-		case formBool(r, l.remove):
-			if err := s.Store.SetSetting(ctx, l.key, ""); err != nil {
-				s.serverError(w, err)
-				return
-			}
-			*l.info = nil
 		}
 	}
 	if err := s.saveBranding(ctx, b); err != nil {
@@ -290,6 +283,25 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.flash(w, r, "/admin/branding", true, "Branding saved.")
+}
+
+// handleLogoReset removes the uploaded logos, so the built-in MonitorIQ
+// logo is shown again. The footer line is kept.
+func (s *Server) handleLogoReset(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	b := s.branding(ctx)
+	for _, key := range []string{logoKey, logoDarkKey} {
+		if err := s.Store.SetSetting(ctx, key, ""); err != nil {
+			s.serverError(w, err)
+			return
+		}
+	}
+	b.Logo, b.LogoDark = nil, nil
+	if err := s.saveBranding(ctx, b); err != nil {
+		s.serverError(w, err)
+		return
+	}
+	s.flash(w, r, "/admin/branding", true, "The default MonitorIQ logo is back.")
 }
 
 // limitBody caps the size of a request body (uploads). Bodies that say they
