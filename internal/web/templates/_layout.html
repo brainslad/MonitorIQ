@@ -7,9 +7,9 @@
 <meta name="generator" content="MonitorIQ by Brainslad, https://github.com/brainslad/MonitorIQ">
 {{if .Refresh}}<meta http-equiv="refresh" content="{{.Refresh}}">{{end}}
 <title>{{.Title}} · MonitorIQ</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/app.css">
-<script src="/static/theme.js"></script>
+<link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "theme.js"}}"></script>
 </head>{{end}}
 
 {{define "icon"}}<svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{{if eq . "dashboard"}}<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>{{else if eq . "monitors"}}<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>{{else if eq . "groups"}}<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 13v8M13 17h8"/>{{else if eq . "hosts"}}<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>{{else if eq . "status"}}<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>{{else if eq . "users"}}<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>{{else if eq . "settings"}}<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>{{else if eq . "account"}}<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6.5 6.5 0 0 1 11 0"/>{{else if eq . "docs"}}<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v16H5.5A1.5 1.5 0 0 0 4 20.5zM4 20.5A1.5 1.5 0 0 0 5.5 22H20"/>{{else if eq . "chevron"}}<path d="m9 6 6 6-6 6"/>{{else if eq . "search"}}<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>{{else if eq . "plus"}}<path d="M12 5v14M5 12h14"/>{{else if eq . "bell"}}<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>{{else if eq . "logout"}}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>{{else if eq . "menu"}}<path d="M4 6h16M4 12h16M4 18h16"/>{{else if eq . "panel"}}<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18"/>{{else if eq . "arrow"}}<path d="M7 17 17 7M8 7h9v9"/>{{else if eq . "globe-out"}}<path d="M14 3h7v7M10 14 21 3M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>{{else if eq . "check"}}<path d="m5 12.5 4.5 4.5L19 7.5"/>{{else if eq . "clock"}}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>{{else if eq . "lock"}}<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>{{else if eq . "download"}}<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>{{else if eq . "info"}}<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>{{end}}</svg>{{end}}
@@ -81,7 +81,7 @@
 {{template "footer" .}}
 </div>
 </div>
-<script src="/static/app.js"></script>
+<script src="{{asset "app.js"}}"></script>
 </body>
 </html>{{end}}
 
@@ -91,7 +91,7 @@
 {{define "credit"}}<span class="credit"><a href="https://github.com/brainslad/MonitorIQ" rel="noopener">MonitorIQ</a>{{if .}} {{.}}{{end}} by <a href="https://github.com/brainslad" rel="noopener">Brainslad</a></span>{{end}}
 {{/* The logo (built-in or custom) with the slogan underneath. Takes a Branding. */}}
 {{define "brand-mark"}}{{if .Logo}}<span class="brand-text"><span class="brand-logo">{{if eq .LogoURL .LogoDarkURL}}<img src="{{.LogoURL}}" alt="Logo">{{else}}<img class="for-light" src="{{.LogoURL}}" alt="Logo"><img class="for-dark" src="{{.LogoDarkURL}}" alt="Logo">{{end}}</span><span class="brand-sub">{{.Slogan}}</span></span><span class="logo mini"><img src="{{.LogoDarkURL}}" alt="" width="22" height="22"></span>
-{{- else}}<span class="logo"><img src="/static/favicon.svg" alt="" width="20" height="20"></span><span class="brand-text"><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">{{.Slogan}}</span></span>{{end}}{{end}}
+{{- else}}<span class="logo"><img src="{{asset "favicon.svg"}}" alt="" width="20" height="20"></span><span class="brand-text"><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">{{.Slogan}}</span></span>{{end}}{{end}}
 {{define "dot"}}<span class="dot {{statusClass .}}" title="{{statusLabel .}}"></span>{{end}}
 {{define "tbadge"}}<span class="tbadge t-{{.}}">{{upper .}}</span>{{end}}
 {{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
