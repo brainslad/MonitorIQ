@@ -20,10 +20,7 @@
 {{if .User}}
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <div class="sb-brand">
-    <a class="brand" href="/">
-      <span class="logo"><img src="/static/favicon.svg" alt="" width="20" height="20"></span>
-      <span class="brand-text"><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">Know before your users do.</span></span>
-    </a>
+    <a class="brand{{if .Brand.Logo}} custom{{end}}" href="/">{{template "brand-mark" .Brand}}</a>
     <button type="button" class="icon-btn sb-collapse" data-sidebar-collapse title="Collapse the sidebar" aria-label="Collapse the sidebar">{{template "icon" "panel"}}</button>
   </div>
   <nav class="sb-nav">
@@ -90,6 +87,9 @@
 
 {{/* Author attribution: GPL-3.0 section 7(b) additional term, see NOTICE. Keep it in modified versions. */}}
 {{define "credit"}}<span class="credit"><a href="https://github.com/brainslad/MonitorIQ" rel="noopener">MonitorIQ</a>{{if .}} {{.}}{{end}} by <a href="https://github.com/brainslad" rel="noopener">Brainslad</a></span>{{end}}
+{{/* The logo (built-in or custom) with the slogan underneath. Takes a Branding. */}}
+{{define "brand-mark"}}{{if .Logo}}<span class="brand-text"><span class="brand-logo">{{if eq .LogoURL .LogoDarkURL}}<img src="{{.LogoURL}}" alt="Logo">{{else}}<img class="for-light" src="{{.LogoURL}}" alt="Logo"><img class="for-dark" src="{{.LogoDarkURL}}" alt="Logo">{{end}}</span><span class="brand-sub">{{.Slogan}}</span></span><span class="logo mini"><img src="{{.LogoDarkURL}}" alt="" width="22" height="22"></span>
+{{- else}}<span class="logo"><img src="/static/favicon.svg" alt="" width="20" height="20"></span><span class="brand-text"><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">{{.Slogan}}</span></span>{{end}}{{end}}
 {{define "dot"}}<span class="dot {{statusClass .}}" title="{{statusLabel .}}"></span>{{end}}
 {{define "tbadge"}}<span class="tbadge t-{{.}}">{{upper .}}</span>{{end}}
 {{define "stext"}}<span class="stext {{statusClass .}}"><span class="dot {{statusClass .}}"></span>{{statusLabel .}}</span>{{end}}
