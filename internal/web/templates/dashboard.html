@@ -132,16 +132,30 @@
     </ul>
   </div>
 
-  <div class="card heat-card">
+  <div class="card heat-card" id="availability">
     <div class="card-head">
-      <div><h2>Availability map</h2><p class="muted small">Hour by hour · last 24 hours</p></div>
-      <span class="chip-select">{{len $d.Heat}} monitors</span>
+      <div><h2>Availability map</h2><p class="muted small">Hour by hour · last 24 hours · {{if $d.HeatPinned}}{{$d.HeatPinned}} chosen{{if lt $d.HeatPinned (len $d.Heat)}}, the rest at random{{end}}{{else}}monitors chosen at random{{end}}</p></div>
+      <button type="button" class="chip-select" data-heat-open aria-expanded="false" aria-controls="heat-picker">{{template "icon" "settings"}}{{len $d.Heat}} monitors</button>
     </div>
+    <form class="heat-picker" id="heat-picker" method="post" action="/dashboard/heat-monitors" data-heat-picker data-max="{{$d.HeatMax}}" hidden>
+      {{template "csrf" .CSRF}}
+      <div class="hp-head"><strong>Choose up to {{$d.HeatMax}} monitors</strong><span class="muted small"><b data-heat-count>0</b> / {{$d.HeatMax}}</span></div>
+      <p class="muted small m0">They are shown in the order you tick them. Free rows are filled with other monitors at random.</p>
+      <input class="search" type="search" placeholder="Filter monitors…" data-heat-filter aria-label="Filter monitors">
+      <ul class="hp-list">
+        {{range $d.HeatChoices}}<li data-text="{{.Name}} {{.Host}}"><label class="check"><input type="checkbox" name="monitor" value="{{.ID}}" {{if .Pos}}checked data-pos="{{.Pos}}"{{end}}{{if and (not .Enabled) (not .Pos)}} disabled{{end}}><span>{{.Name}} <small class="muted">· {{.Host}}{{if not .Enabled}} · paused{{end}}</small></span><b class="hp-pos"></b></label></li>{{end}}
+      </ul>
+      <div class="form-actions">
+        <button class="btn small" name="reset" value="1">Random</button>
+        <button type="button" class="btn small" data-heat-cancel>Cancel</button>
+        <button class="btn small primary">Save</button>
+      </div>
+    </form>
     <div class="heat-big"><span class="big">{{pctf $d.HeatPct}}<small>%</small></span><span class="muted small">of monitor-hours fully operational</span></div>
     <svg class="heat-arc" viewBox="0 0 400 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 12 Q200 -6 398 12"/></svg>
     <div class="heat">
       {{range $d.Heat}}
-      <a class="heat-row" href="/monitors/{{.ID}}"><span class="heat-name" title="{{.Name}}">{{.Name}}</span><span class="heat-cells">{{range .Cells}}<i class="hc {{.Level}}" title="{{hourLabel .Day}} · {{if .Total}}{{pctVal .Uptime}}{{else}}no data{{end}}"></i>{{end}}</span></a>
+      <a class="heat-row" href="/monitors/{{.ID}}"><span class="heat-name" title="{{.Name}}{{if .Pinned}} · chosen{{end}}">{{if .Pinned}}<i class="pin" aria-hidden="true"></i>{{end}}{{.Name}}</span><span class="heat-cells">{{range .Cells}}<i class="hc {{.Level}}" title="{{hourLabel .Day}} · {{if .Total}}{{pctVal .Uptime}}{{else}}no data{{end}}"></i>{{end}}</span></a>
       {{end}}
     </div>
     <div class="heat-foot"><span class="heat-name"></span><span class="heat-ticks">{{range $d.HeatHours}}<span>{{.}}</span>{{end}}<span>now</span></span></div>
