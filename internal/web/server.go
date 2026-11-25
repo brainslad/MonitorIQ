@@ -108,7 +108,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(staticFS, "static")
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
-	mux.Handle("GET /static/", cacheFor(24*time.Hour, fileServer))
+	mux.Handle("GET /static/", cacheFor(24*time.Hour, noListing(fileServer)))
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 
 	// Public
@@ -298,6 +298,30 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 		s.Log.Debug("http", "method", r.Method, "path", r.URL.Path, "status", rec.code,
 			"ms", time.Since(start).Milliseconds(), "ip", s.clientIP(r))
 	})
+}
+
+// noListing answers 404 for directories, so the file server never lists them.
+func noListing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// crossSite reports whether the browser says r comes from another site
+// (Sec-Fetch-Site, or an Origin whose host is not the request host).
+func crossSite(r *http.Request) bool {
+	if v := r.Header.Get("Sec-Fetch-Site"); v != "" {
+		return v == "cross-site"
+	}
+	if o := r.Header.Get("Origin"); o != "" && o != "null" {
+		u, err := url.Parse(o)
+		return err != nil || !strings.EqualFold(u.Host, r.Host)
+	}
+	return false
 }
 
 func cacheFor(d time.Duration, next http.Handler) http.Handler {
