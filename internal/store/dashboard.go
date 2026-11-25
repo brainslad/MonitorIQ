@@ -9,6 +9,9 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/brainslad/monitoriq/internal/checks"
+	"github.com/jackc/pgx/v5"
 )
 
 // NavCounts feeds the badges of the sidebar.
@@ -160,4 +163,94 @@ func (s *Store) ChecksSince(ctx context.Context, since time.Time) (int, error) {
 	var n int
 	err := s.Pool.QueryRow(ctx, `SELECT coalesce(sum(total), 0) FROM check_results_hourly WHERE bucket >= date_trunc('hour', $1::timestamptz)`, since).Scan(&n)
 	return n, err
+}
+
+// DrillMonitor is one monitor's share of a dashboard chart bucket.
+type DrillMonitor struct {
+	ID       int64    `json:"id"`
+	Name     string   `json:"name"`
+	Host     string   `json:"host"`
+	Type     string   `json:"type"`
+	Up       int      `json:"up"`
+	Degraded int      `json:"degraded"`
+	Down     int      `json:"down"`
+	AvgMs    *float64 `json:"avg_ms"`
+	MaxMs    *float64 `json:"max_ms"`
+}
+
+// DrillEvent is something recorded during a dashboard chart bucket: a
+// status change of a monitor, or a check that failed or was degraded.
+type DrillEvent struct {
+	Kind        string        `json:"kind"` // "change" or "check"
+	At          time.Time     `json:"t"`
+	MonitorID   int64         `json:"monitor_id"`
+	MonitorName string        `json:"monitor"`
+	From        checks.Status `json:"from"`
+	Status      checks.Status `json:"status"`
+	LatencyMs   *float64      `json:"latency_ms"`
+	Message     string        `json:"message"`
+}
+
+// Drill is what happened between From and To, for the drill-down of a bar
+// of the dashboard chart.
+type Drill struct {
+	Monitors []DrillMonitor `json:"monitors"`
+	Events   []DrillEvent   `json:"events"`
+	// Truncated is set when there were more events than the limit.
+	Truncated bool `json:"truncated"`
+}
+
+// DrillDown returns, for the enabled monitors, the checks by result of each
+// monitor (from the hourly roll-ups, problems first), and the status changes
+// and failed or degraded checks recorded in [from, to), newest first.
+func (s *Store) DrillDown(ctx context.Context, from, to time.Time, limit int) (*Drill, error) {
+	d := &Drill{Monitors: []DrillMonitor{}, Events: []DrillEvent{}}
+	rows, err := s.Pool.Query(ctx, `SELECT m.id, m.name, hs.name, m.type,
+		sum(h.up)::int, sum(h.degraded)::int, sum(h.down)::int,
+		CASE WHEN sum(h.latency_count) > 0 THEN sum(h.latency_sum) / sum(h.latency_count) END, max(h.latency_max)
+		FROM check_results_hourly h JOIN monitors m ON m.id = h.monitor_id JOIN hosts hs ON hs.id = m.host_id
+		WHERE m.enabled AND h.bucket >= $1 AND h.bucket < $2
+		GROUP BY m.id, m.name, hs.name, m.type
+		ORDER BY sum(h.down) DESC, sum(h.degraded) DESC, lower(m.name)`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	d.Monitors, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (DrillMonitor, error) {
+		var m DrillMonitor
+		err := r.Scan(&m.ID, &m.Name, &m.Host, &m.Type, &m.Up, &m.Degraded, &m.Down, &m.AvgMs, &m.MaxMs)
+		return m, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if d.Monitors == nil {
+		d.Monitors = []DrillMonitor{}
+	}
+	rows, err = s.Pool.Query(ctx, `SELECT * FROM (
+		SELECT 'change' AS kind, e.created_at, e.monitor_id, m.name, e.from_status, e.to_status, NULL::double precision, e.message
+		FROM events e JOIN monitors m ON m.id = e.monitor_id
+		WHERE m.enabled AND e.created_at >= $1 AND e.created_at < $2
+		UNION ALL
+		SELECT 'check', r.checked_at, r.monitor_id, m.name, r.status, r.status, r.latency_ms, r.message
+		FROM check_results r JOIN monitors m ON m.id = r.monitor_id
+		WHERE m.enabled AND r.status IN (2,3) AND r.checked_at >= $1 AND r.checked_at < $2
+	) x ORDER BY 2 DESC LIMIT $3`, from, to, limit+1)
+	if err != nil {
+		return nil, err
+	}
+	d.Events, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (DrillEvent, error) {
+		var e DrillEvent
+		err := r.Scan(&e.Kind, &e.At, &e.MonitorID, &e.MonitorName, &e.From, &e.Status, &e.LatencyMs, &e.Message)
+		return e, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if d.Events == nil {
+		d.Events = []DrillEvent{}
+	}
+	if len(d.Events) > limit {
+		d.Events, d.Truncated = d.Events[:limit], true
+	}
+	return d, nil
 }

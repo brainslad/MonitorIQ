@@ -285,6 +285,8 @@
     setInterval(function () {
       var a = document.activeElement;
       if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
+      // Keep an open drill-down on screen.
+      if (document.querySelector("[data-drill]:not([hidden])")) return;
       if (document.visibilityState === "visible") window.location.reload();
     }, 60000);
   }
@@ -363,6 +365,11 @@
         options: {
           responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
           interaction: { mode: "index", intersect: false },
+          onClick: function (evt, els, chart) {
+            var hit = chart.getElementsAtEventForMode(evt, "index", { intersect: false }, false);
+            if (hit.length) openDrill(hit[0].index);
+          },
+          onHover: function (evt, els) { evt.native.target.style.cursor = els.length ? "pointer" : "default"; },
           scales: {
             x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: Object.assign({ maxRotation: 0, autoSkipPadding: 14 }, ticks) },
             y: { stacked: true, beginAtZero: true, grid: { color: css("--border"), drawTicks: false }, border: { display: false, dash: [3, 4] },
@@ -391,6 +398,117 @@
       dashChart = new window.Chart(dash, cfg);
     };
     renderers.push(drawDash);
+
+    // Drill-down: what was recorded during the column that was clicked.
+    var drill = document.querySelector("[data-drill]"), drillIdx = -1, drillFilter = "all", drillEvents = [];
+    var q = function (sel) { return drill.querySelector(sel); };
+    var el = function (tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    };
+    var stClass = ["unknown", "up", "degraded", "down"], stLabel = ["Unknown", "Operational", "Degraded", "Down"];
+    var numCell = function (n, cls) { var td = el("td", "num " + (n ? cls : "zero"), fmtN(n)); return td; };
+    var renderEvents = function () {
+      var ul = q("[data-drill-events]");
+      ul.textContent = "";
+      var list = drillEvents.filter(function (e) { return drillFilter === "all" || e.kind === drillFilter; });
+      if (!list.length) {
+        ul.appendChild(el("li", "drill-empty", drillFilter === "check" ? "No failed or degraded checks in this period." :
+          drillFilter === "change" ? "No status changes in this period." : "Nothing was recorded in this period: every check passed."));
+        return;
+      }
+      var multiDay = ((dashData.summary || {}).hours || 1) >= 24;
+      list.forEach(function (e) {
+        var li = el("li"), d = new Date(e.t);
+        var t = el("time", null, (multiDay ? d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " : "") +
+          d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: multiDay ? undefined : "2-digit", hour12: false }));
+        t.setAttribute("datetime", e.t);
+        t.title = d.toLocaleString();
+        li.appendChild(t);
+        li.appendChild(el("span", "dot " + stClass[e.status]));
+        var main = el("div"), a = el("a", null, e.monitor);
+        a.href = "/monitors/" + e.monitor_id;
+        main.appendChild(a);
+        var what;
+        if (e.kind === "change") {
+          what = stLabel[e.from] + " → " + stLabel[e.status];
+          main.appendChild(el("span", "kind", "status change"));
+        } else {
+          what = stLabel[e.status] + (e.latency_ms != null ? " · " + fmtMs(e.latency_ms) : "");
+          main.appendChild(el("span", "kind", "check"));
+        }
+        var sm = el("small");
+        sm.appendChild(el("span", "c-" + stClass[e.status], what));
+        if (e.message) sm.appendChild(document.createTextNode(" · " + e.message));
+        main.appendChild(sm);
+        li.appendChild(main);
+        ul.appendChild(li);
+      });
+    };
+    var renderDrill = function (d) {
+      var tb = q("[data-drill-monitors]");
+      tb.textContent = "";
+      if (!d.monitors.length) {
+        var tr = el("tr"), td = el("td", "drill-empty", "No checks were run in this period.");
+        td.colSpan = 6; tr.appendChild(td); tb.appendChild(tr);
+      }
+      d.monitors.forEach(function (m) {
+        var tr = el("tr"), td = el("td"), a = el("a", "mon-name", m.name);
+        a.href = "/monitors/" + m.id;
+        td.appendChild(a);
+        td.appendChild(el("div", "muted small", m.host + " · " + m.type.toUpperCase()));
+        tr.appendChild(td);
+        tr.appendChild(numCell(m.up, ""));
+        tr.appendChild(numCell(m.degraded, "c-degraded"));
+        tr.appendChild(numCell(m.down, "c-down"));
+        tr.appendChild(el("td", "num", fmtMs(m.avg_ms)));
+        tr.appendChild(el("td", "num hide-sm", fmtMs(m.max_ms)));
+        tb.appendChild(tr);
+      });
+      drillEvents = d.events;
+      var changes = d.events.filter(function (e) { return e.kind === "change"; }).length;
+      q("[data-drill-count]").textContent = "· " + (d.truncated ? "latest " : "") + d.events.length + " (" + changes + " status " + (changes === 1 ? "change" : "changes") + ")";
+      renderEvents();
+    };
+    var openDrill = function (i) {
+      if (!drill || !dashData) return;
+      var b = dashData.buckets || [], hours = (dashData.summary || {}).hours || 1;
+      if (i < 0 || i >= b.length) return;
+      drillIdx = i;
+      var x = b[i], total = x.up + x.degraded + x.down;
+      drill.hidden = false;
+      drill.classList.add("loading");
+      q("[data-drill-title]").textContent = spanLabel(x.t, hours);
+      q("[data-drill-sub]").textContent = fmtN(total) + " checks · " + fmtN(x.degraded) + " degraded · " + fmtN(x.down) + " down · avg response " + fmtMs(x.avg_ms);
+      q('[data-drill-step="-1"]').disabled = i === 0;
+      q('[data-drill-step="1"]').disabled = i === b.length - 1;
+      fetch("/api/dashboard/drill?t=" + encodeURIComponent(x.t) + "&hours=" + hours, { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) { if (drillIdx === i) { renderDrill(d); drill.classList.remove("loading"); } })
+        .catch(function () { drill.classList.remove("loading"); q("[data-drill-sub]").textContent = "Could not load the events of this period."; });
+      if (dashChart) {
+        dashChart.setActiveElements([{ datasetIndex: 1, index: i }]);
+        dashChart.update("none");
+      }
+      var r = drill.getBoundingClientRect();
+      if (r.top > window.innerHeight - 120) drill.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+    if (drill) {
+      q("[data-drill-close]").addEventListener("click", function () { drill.hidden = true; drillIdx = -1; });
+      drill.querySelectorAll("[data-drill-step]").forEach(function (btn) {
+        btn.addEventListener("click", function () { openDrill(drillIdx + parseInt(btn.getAttribute("data-drill-step"), 10)); });
+      });
+      q("[data-drill-filter]").addEventListener("click", function (e) {
+        var btn = e.target.closest(".fpill");
+        if (!btn) return;
+        drillFilter = btn.getAttribute("data-value");
+        q("[data-drill-filter]").querySelectorAll(".fpill").forEach(function (x) { x.classList.toggle("active", x === btn); });
+        renderEvents();
+      });
+    }
+
     var loadDash = function () {
       fetch(dash.getAttribute("data-series") + "?range=" + encodeURIComponent(dashRange), { credentials: "same-origin" })
         .then(function (r) { return r.json(); })
@@ -404,6 +522,7 @@
         if (!btn) return;
         dashRange = btn.getAttribute("data-range");
         store.sset("miq-dash-range", dashRange);
+        if (drill) { drill.hidden = true; drillIdx = -1; }
         dashRanges.querySelectorAll("button").forEach(function (x) { x.classList.toggle("active", x === btn); });
         loadDash();
       });
