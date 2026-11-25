@@ -86,3 +86,32 @@ func TestStaticVersioned(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckSVG(t *testing.T) {
+	ok := []string{
+		`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="#123"/></svg>`,
+		`<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><linearGradient id="g"/></defs><use xlink:href="#g"/><image href="data:image/png;base64,AAAA"/></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:red}</style><text class="a">Logo</text></svg>`,
+	}
+	for _, v := range ok {
+		if _, err := logoType([]byte(v)); err != nil {
+			t.Errorf("logoType(%q) = %v, want it accepted", v, err)
+		}
+	}
+	bad := []string{
+		`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>`,
+		`<svg xmlns="http://www.w3.org/2000/svg"><rect ONCLICK="x()"/></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div xmlns="http://www.w3.org/1999/xhtml">x</div></foreignObject></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript:alert(1)"><text>x</text></a></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.example/x.png"/></svg>`,
+		`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="https://evil.example/s.svg#a"/></svg>`,
+		`<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>`,
+		`<?xml-stylesheet href="https://evil.example/a.css"?><svg xmlns="http://www.w3.org/2000/svg"/>`,
+	}
+	for _, v := range bad {
+		if _, err := logoType([]byte(v)); err == nil {
+			t.Errorf("logoType(%q) accepted, want it refused", v)
+		}
+	}
+}

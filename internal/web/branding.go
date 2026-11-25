@@ -163,9 +163,59 @@ func logoType(data []byte) (string, error) {
 		return ct, nil
 	}
 	if isSVG(data) {
+		if err := checkSVG(data); err != nil {
+			return "", err
+		}
 		return "image/svg+xml", nil
 	}
 	return "", errLogoType
+}
+
+var errSVGUnsafe = errors.New("the SVG logo contains scripts, event handlers, embedded HTML or links to other files: export it again as a plain SVG")
+
+// checkSVG refuses an SVG logo with active content. Logos are shown through
+// <img> and served with a sandboxing CSP, so none of this could run in a
+// browser today; refusing it keeps an uploaded logo harmless even if it is
+// ever opened or embedded some other way.
+func checkSVG(data []byte) error {
+	lower := bytes.ToLower(data)
+	if bytes.Contains(lower, []byte("<!doctype")) || bytes.Contains(lower, []byte("<!entity")) {
+		return errSVGUnsafe
+	}
+	d := xml.NewDecoder(bytes.NewReader(data))
+	d.Strict = false
+	for {
+		tok, err := d.Token()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return errors.New("the SVG logo is not valid XML")
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			switch strings.ToLower(t.Name.Local) {
+			case "script", "foreignobject", "iframe", "embed", "object", "handler", "listener":
+				return errSVGUnsafe
+			}
+			for _, a := range t.Attr {
+				name, val := strings.ToLower(a.Name.Local), strings.ToLower(strings.TrimSpace(a.Value))
+				if strings.HasPrefix(name, "on") {
+					return errSVGUnsafe
+				}
+				if (name == "href" || name == "src") && val != "" && !strings.HasPrefix(val, "#") && !strings.HasPrefix(val, "data:image/") {
+					return errSVGUnsafe
+				}
+				if strings.Contains(val, "javascript:") {
+					return errSVGUnsafe
+				}
+			}
+		case xml.ProcInst:
+			if !strings.EqualFold(t.Target, "xml") {
+				return errSVGUnsafe
+			}
+		}
+	}
 }
 
 // isSVG reports whether data is an XML document whose root element is <svg>.
