@@ -19,7 +19,7 @@
 <div class="app-shell">
 {{if .User}}
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-  <div class="sb-brand">
+  <div class="sb-brand{{if .Brand.Logo}} custom{{end}}">
     <a class="brand{{if .Brand.Logo}} custom{{end}}" href="/">{{template "brand-mark" .Brand}}</a>
     <button type="button" class="icon-btn sb-collapse" data-sidebar-collapse title="Collapse the sidebar" aria-label="Collapse the sidebar">{{template "icon" "panel"}}</button>
   </div>

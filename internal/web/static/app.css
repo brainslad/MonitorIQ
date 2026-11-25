@@ -557,6 +557,13 @@ a.tile:hover{text-decoration:none;background:rgba(255,255,255,.1)}
 .chart-card .chart-body{flex:1;min-height:0}
 .chart-box.tall{min-height:268px}
 .sb-brand .brand-sub{font-size:.68rem;letter-spacing:-.01em}
+/* a custom logo is centred in the menu column; the collapse button sits in
+   the top-right corner beside it */
+.sb-brand.custom{position:relative;justify-content:center;padding:2px 0 14px}
+.sb-brand.custom .brand-text{text-align:center}
+.sb-brand.custom .brand-logo img{max-width:148px;margin:0 auto;object-position:center}
+.sb-brand.custom .sb-collapse{position:absolute;top:0;right:-6px;width:28px;height:28px;border-radius:9px}
+:root.sb-collapsed .sb-brand.custom .sb-collapse{position:static;width:34px;height:34px}
 
 /* author credit */
 .credit a{color:inherit;font-weight:600}
