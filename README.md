@@ -188,7 +188,7 @@ Installer options:
 | `--db-url postgres://…` | Use an existing PostgreSQL instead of installing a local one |
 | `--pg-version 15` | PostgreSQL version to install (default 16) |
 
-**Upgrade:** download the new version and run `sudo ./install.sh` again (from a git clone: `git pull` and then `sudo ./install.sh`, which always rebuilds from source). Configuration and data are kept, migrations are applied automatically, and the installer shows the old and the new version.
+**Upgrade:** download the new version and run `sudo ./install.sh` again (from a git clone: `git pull` and then `sudo ./install.sh`, which always rebuilds from source). Configuration and data are kept, migrations are applied automatically, and the installer shows the old and the new version. Browsers pick up the new interface at once: pages link the styles and scripts with a version in the address. A browser that still holds files from a version without this (up to 0.4.0) may need one hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on a Mac).
 
 **Uninstall:** `sudo ./uninstall.sh` (keeps data) or `sudo ./uninstall.sh --purge` (deletes the database and configuration).
 
@@ -278,6 +278,8 @@ Open **Settings → Email**, enter your SMTP server and sender address, tick *Se
 2. **Public IP of this server:** detected automatically by asking `https://api.ipify.org` every 6 hours (any service that returns the address as plain text works), typed in by hand, or not shown at all.
 3. **Location of this server:** taken from the database for its public address. Behind NAT, a VPN or a proxy, set the latitude and longitude by hand.
 
+**Zooming the map:** the maps open zoomed to the locations they show. Zoom with the **+** and **−** buttons, the mouse wheel or a double click (Shift + double click zooms out), and drag to move around. Two more buttons go back to the fitted view and to the whole world. Markers and labels keep their size, and markers that would overlap at the current zoom (for example this server and a target in the same city) are fanned out until there is room for them. Targets in the same place are drawn as one marker with a count; hover it to see their names.
+
 Lookups of targets happen locally: names are resolved with the server's DNS (results cached for 10 minutes), and the database is read from disk. Only the optional public-IP detection and the database download make outbound requests. Maps credit the database as its licence requires.
 
 ### Export to Excel
@@ -297,6 +299,7 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 - **Footer:** **Settings → Branding** sets a line shown at the bottom of every page, above the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE). Without it, the footer shows only the credit.
 - **Logo:** the same page takes a logo (PNG, JPEG or GIF up to 5 MB, shrunk automatically to at most 600 × 150 px; SVG or WebP up to 512 KB; optionally a second one for the dark theme), shown at a fixed height whatever its size. **Reset to the default logos** brings back the MonitorIQ logo. It replaces the MonitorIQ logo in the menu and on the sign-in page, and the slogan *Know before your users do.* stays underneath.
 - **Drill-down:** click a column of *Checks and response time* to see, for that hour (or 6 hours / day), each monitor's checks by result and response time, and the status changes and failed or degraded checks recorded then. The arrows step to the previous and next column.
+- **Sign out:** the red button next to your name at the bottom of the menu.
 - **Availability map:** the gear button on the card lets each user pick up to 10 monitors, in order. Free rows are filled with other monitors at random; the random choice stays the same for the day.
 
 ### Command line
