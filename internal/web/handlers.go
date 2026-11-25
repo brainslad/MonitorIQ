@@ -25,7 +25,7 @@ import (
 // "/\t/evil.example" would leave the site: any control character, space or
 // backslash is refused.
 func safeNext(next string) string {
-	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
+	if len(next) == 0 || next[0] != '/' || (len(next) > 1 && (next[1] == '/' || next[1] == '\\')) {
 		return "/"
 	}
 	for _, c := range next {
