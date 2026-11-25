@@ -575,9 +575,13 @@ func formBool(r *http.Request, key string) bool {
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
+	// /healthz is public: it says only whether the service works. The
+	// version and any database error stay in the log, so an anonymous
+	// visitor learns neither the exact build nor details of the database.
 	if err := s.Store.Pool.Ping(ctx); err != nil {
-		http.Error(w, "db: "+err.Error(), http.StatusServiceUnavailable)
+		s.Log.Error("health check: database unreachable", "err", err)
+		http.Error(w, `{"status":"error"}`, http.StatusServiceUnavailable)
 		return
 	}
-	writeJSON(w, map[string]string{"status": "ok", "version": Version})
+	writeJSON(w, map[string]string{"status": "ok"})
 }
