@@ -7,6 +7,9 @@ package web
 
 import (
 	"bytes"
+	"image"
+	"image/color"
+	"image/png"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +31,7 @@ func TestLogoType(t *testing.T) {
 			t.Errorf("logoType(%q) accepted", bad)
 		}
 	}
-	if _, err := logoType(append(png, bytes.Repeat([]byte{0}, MaxLogoBytes)...)); err == nil {
+	if _, err := logoType(append(png, bytes.Repeat([]byte{0}, MaxUploadBytes)...)); err == nil {
 		t.Error("oversized logo accepted")
 	}
 }
@@ -86,5 +89,48 @@ func TestPickHeat(t *testing.T) {
 	}
 	if n := len(pickHeat(list[:4], nil, 1, now)); n != 3 {
 		t.Errorf("small fleet: %d rows, want 3", n)
+	}
+}
+
+func TestFitLogo(t *testing.T) {
+	for _, c := range []struct{ w, h, ww, wh int }{
+		{2000, 500, 600, 150}, {100, 40, 100, 40}, {1024, 1024, 150, 150}, {3000, 100, 600, 20}, {600, 150, 600, 150},
+	} {
+		if w, h := fitBox(c.w, c.h, logoMaxW, logoMaxH); w != c.ww || h != c.wh {
+			t.Errorf("fitBox(%d×%d) = %d×%d, want %d×%d", c.w, c.h, w, h, c.ww, c.wh)
+		}
+	}
+	// A large opaque red PNG with a transparent right half shrinks to the box.
+	src := image.NewNRGBA(image.Rect(0, 0, 1200, 300))
+	for y := 0; y < 300; y++ {
+		for x := 0; x < 600; x++ {
+			src.SetNRGBA(x, y, color.NRGBA{R: 255, A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, src); err != nil {
+		t.Fatal(err)
+	}
+	out, ct, err := fitLogo(buf.Bytes(), "image/png")
+	if err != nil || ct != "image/png" {
+		t.Fatalf("fitLogo: %q %v", ct, err)
+	}
+	img, err := png.Decode(bytes.NewReader(out))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := img.Bounds(); b.Dx() != 600 || b.Dy() != 150 {
+		t.Fatalf("size %v", b)
+	}
+	if r, _, _, a := img.At(10, 10).RGBA(); r>>8 != 255 || a>>8 != 255 {
+		t.Errorf("left pixel %v", img.At(10, 10))
+	}
+	if _, _, _, a := img.At(590, 10).RGBA(); a != 0 {
+		t.Errorf("right pixel not transparent: %v", img.At(590, 10))
+	}
+	// Small images and SVG are kept as they are.
+	small := []byte("<svg xmlns='http://www.w3.org/2000/svg'/>")
+	if out, ct, _ := fitLogo(small, "image/svg+xml"); !bytes.Equal(out, small) || ct != "image/svg+xml" {
+		t.Error("svg changed")
 	}
 }

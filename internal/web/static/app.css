@@ -747,8 +747,10 @@ body.has-bulk main{padding-bottom:90px}
 /* custom logo (Settings → Branding): the image with the slogan underneath */
 .brand.custom{gap:0}
 .brand-logo{display:block;line-height:0;margin-bottom:5px}
-.brand-logo img{display:block;max-width:168px;max-height:42px;width:auto;height:auto;object-fit:contain}
-.brand.big .brand-logo img{max-width:240px;max-height:56px;margin:0 auto}
+/* a fixed height whatever the image size (SVGs without a size included);
+   the width follows the proportions, up to the sidebar width */
+.brand-logo img{display:block;height:40px;width:auto;max-width:168px;object-fit:contain;object-position:left center}
+.brand.big .brand-logo img{height:56px;max-width:260px;margin:0 auto;object-position:center}
 .brand.big.custom .brand-text{text-align:center}
 .brand.custom .logo.mini{display:none;background:transparent;box-shadow:none;overflow:hidden}
 /* collapsed menu: the left end of the logo, where the symbol usually is */
