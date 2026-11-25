@@ -296,6 +296,7 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 - **Display name:** each user can set a display name under **My account**, and administrators can set it under **Users** (also when creating a user). It is shown in the menu and in the dashboard greeting ("Good morning, Jane Doe"). Without one, the greeting uses the first part of the username. A name set in MonitorIQ is kept when LDAP or SSO report another one at sign-in.
 - **Footer:** **Settings → Branding** sets the footer line shown after the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE).
 - **Logo:** the same page takes a logo (PNG, JPEG, GIF, WebP or SVG, up to 512 KB; optionally a second one for the dark theme). It replaces the MonitorIQ logo in the menu and on the sign-in page, and the slogan *Know before your users do.* stays underneath.
+- **Drill-down:** click a column of *Checks and response time* to see, for that hour (or 6 hours / day), each monitor's checks by result and response time, and the status changes and failed or degraded checks recorded then. The arrows step to the previous and next column.
 
 ### Command line
 
