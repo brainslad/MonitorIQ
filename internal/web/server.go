@@ -130,10 +130,13 @@ func (s *Server) Handler() http.Handler {
 
 	// Authenticated
 	auth := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.requireSession(false, h)) }
+	// admin routes change the configuration (or show the forms that do):
+	// read-only users get "403 Administrators only".
+	admin := func(pattern string, h http.HandlerFunc) { auth(pattern, s.requireAdmin(h)) }
 	auth("POST /logout", s.handleLogout)
 	auth("GET /{$}", s.handleDashboard)
 	auth("GET /monitors/{id}", s.handleMonitorDetail)
-	auth("POST /monitors/{id}/check", s.handleMonitorCheckNow)
+	admin("POST /monitors/{id}/check", s.handleMonitorCheckNow)
 	auth("GET /api/monitors/{id}/series", s.handleSeries)
 	auth("GET /api/dashboard/series", s.handleDashboardSeries)
 	auth("GET /api/dashboard/drill", s.handleDashboardDrill)
@@ -142,40 +145,40 @@ func (s *Server) Handler() http.Handler {
 	auth("GET /export/download", s.handleExportDownload)
 
 	auth("GET /admin/hosts", s.handleHosts)
-	auth("GET /admin/hosts/new", s.handleHostForm)
-	auth("POST /admin/hosts/new", s.handleHostSave)
-	auth("GET /admin/hosts/{id}/edit", s.handleHostForm)
-	auth("POST /admin/hosts/{id}/edit", s.handleHostSave)
-	auth("POST /admin/hosts/{id}/delete", s.handleHostDelete)
+	admin("GET /admin/hosts/new", s.handleHostForm)
+	admin("POST /admin/hosts/new", s.handleHostSave)
+	admin("GET /admin/hosts/{id}/edit", s.handleHostForm)
+	admin("POST /admin/hosts/{id}/edit", s.handleHostSave)
+	admin("POST /admin/hosts/{id}/delete", s.handleHostDelete)
 
 	auth("GET /admin/monitors", s.handleMonitors)
-	auth("GET /admin/monitors/new", s.handleMonitorForm)
-	auth("POST /admin/monitors/new", s.handleMonitorSave)
-	auth("GET /admin/monitors/{id}/edit", s.handleMonitorForm)
-	auth("POST /admin/monitors/{id}/edit", s.handleMonitorSave)
-	auth("POST /admin/monitors/{id}/delete", s.handleMonitorDelete)
-	auth("POST /admin/monitors/{id}/toggle", s.handleMonitorToggle)
-	auth("POST /admin/monitors/move", s.handleMonitorsMove)
+	admin("GET /admin/monitors/new", s.handleMonitorForm)
+	admin("POST /admin/monitors/new", s.handleMonitorSave)
+	admin("GET /admin/monitors/{id}/edit", s.handleMonitorForm)
+	admin("POST /admin/monitors/{id}/edit", s.handleMonitorSave)
+	admin("POST /admin/monitors/{id}/delete", s.handleMonitorDelete)
+	admin("POST /admin/monitors/{id}/toggle", s.handleMonitorToggle)
+	admin("POST /admin/monitors/move", s.handleMonitorsMove)
 
 	auth("GET /admin/groups", s.handleGroups)
-	auth("GET /admin/groups/new", s.handleGroupForm)
-	auth("POST /admin/groups/new", s.handleGroupSave)
-	auth("GET /admin/groups/{id}/edit", s.handleGroupForm)
-	auth("POST /admin/groups/{id}/edit", s.handleGroupSave)
-	auth("POST /admin/groups/{id}/delete", s.handleGroupDelete)
+	admin("GET /admin/groups/new", s.handleGroupForm)
+	admin("POST /admin/groups/new", s.handleGroupSave)
+	admin("GET /admin/groups/{id}/edit", s.handleGroupForm)
+	admin("POST /admin/groups/{id}/edit", s.handleGroupSave)
+	admin("POST /admin/groups/{id}/delete", s.handleGroupDelete)
 
 	auth("GET /admin/status-pages", s.handleStatusPages)
-	auth("GET /admin/status-pages/new", s.handleStatusPageForm)
-	auth("POST /admin/status-pages/new", s.handleStatusPageSave)
-	auth("GET /admin/status-pages/{id}/edit", s.handleStatusPageForm)
-	auth("POST /admin/status-pages/{id}/edit", s.handleStatusPageSave)
-	auth("POST /admin/status-pages/{id}/delete", s.handleStatusPageDelete)
+	admin("GET /admin/status-pages/new", s.handleStatusPageForm)
+	admin("POST /admin/status-pages/new", s.handleStatusPageSave)
+	admin("GET /admin/status-pages/{id}/edit", s.handleStatusPageForm)
+	admin("POST /admin/status-pages/{id}/edit", s.handleStatusPageSave)
+	admin("POST /admin/status-pages/{id}/delete", s.handleStatusPageDelete)
 
-	auth("GET /admin/users", s.handleUsers)
-	auth("POST /admin/users", s.handleUserCreate)
-	auth("POST /admin/users/{id}/delete", s.handleUserDelete)
-	auth("POST /admin/users/{id}/reset-2fa", s.handleUserReset2FA)
-	auth("POST /admin/users/{id}/name", s.handleUserRename)
+	admin("GET /admin/users", s.handleUsers)
+	admin("POST /admin/users", s.handleUserCreate)
+	admin("POST /admin/users/{id}/delete", s.handleUserDelete)
+	admin("POST /admin/users/{id}/reset-2fa", s.handleUserReset2FA)
+	admin("POST /admin/users/{id}/name", s.handleUserRename)
 	auth("POST /account/name", s.handleAccountName)
 
 	auth("GET /account", s.handleAccount)
@@ -185,23 +188,23 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /account/2fa/recovery", s.handleRecoveryRegenerate)
 	auth("POST /account/sessions/revoke", s.handleRevokeSessions)
 
-	auth("GET /admin/settings", s.handleSettings)
-	auth("POST /admin/settings", s.handleSettingsSave)
-	auth("POST /admin/settings/purge", s.handlePurgeNow)
-	auth("GET /admin/auth", s.handleAuthSettings)
-	auth("POST /admin/auth", s.handleAuthSettingsSave)
-	auth("POST /admin/auth/ldap-test", s.handleLDAPTest)
-	auth("GET /admin/email", s.handleEmailSettings)
-	auth("POST /admin/email", s.handleEmailSettingsSave)
-	auth("POST /admin/email/test", s.handleEmailTest)
+	admin("GET /admin/settings", s.handleSettings)
+	admin("POST /admin/settings", s.handleSettingsSave)
+	admin("POST /admin/settings/purge", s.handlePurgeNow)
+	admin("GET /admin/auth", s.handleAuthSettings)
+	admin("POST /admin/auth", s.handleAuthSettingsSave)
+	admin("POST /admin/auth/ldap-test", s.handleLDAPTest)
+	admin("GET /admin/email", s.handleEmailSettings)
+	admin("POST /admin/email", s.handleEmailSettingsSave)
+	admin("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
-	auth("GET /admin/branding", s.handleBrandingForm)
-	mux.Handle("POST /admin/branding", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleBrandingSave)))
-	mux.Handle("POST /admin/branding/reset-logo", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.handleLogoReset)))
-	auth("GET /admin/geo", s.handleGeoSettings)
-	auth("POST /admin/geo", s.handleGeoSettingsSave)
-	auth("POST /admin/geo/update", s.handleGeoUpdate)
-	auth("POST /admin/geo/lookup", s.handleGeoLookup)
+	admin("GET /admin/branding", s.handleBrandingForm)
+	mux.Handle("POST /admin/branding", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.requireAdmin(s.handleBrandingSave))))
+	mux.Handle("POST /admin/branding/reset-logo", s.limitBody(3*MaxUploadBytes+64<<10, "/admin/branding", s.requireSession(false, s.requireAdmin(s.handleLogoReset))))
+	admin("GET /admin/geo", s.handleGeoSettings)
+	admin("POST /admin/geo", s.handleGeoSettingsSave)
+	admin("POST /admin/geo/update", s.handleGeoUpdate)
+	admin("POST /admin/geo/lookup", s.handleGeoLookup)
 
 	return s.securityHeaders(s.logRequests(mux))
 }
@@ -275,6 +278,22 @@ func (s *Server) requireSession(partial bool, next http.HandlerFunc) http.Handle
 		}
 		http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
 	})
+}
+
+// requireAdmin lets only administrators through; it runs after
+// requireSession, which has put the user in the request.
+func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if userFrom(r).IsAdmin() {
+			next(w, r)
+			return
+		}
+		if r.Method != http.MethodGet || strings.HasPrefix(r.URL.Path, "/api/") {
+			http.Error(w, "Administrators only: your account is read-only.", http.StatusForbidden)
+			return
+		}
+		s.renderStatus(w, r, http.StatusForbidden, "forbidden", &page{Title: "Administrators only"})
+	}
 }
 
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
