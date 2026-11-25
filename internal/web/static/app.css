@@ -730,3 +730,13 @@ body.has-bulk main{padding-bottom:90px}
 .inline-form input{flex:1;min-width:0}
 .inline-form input{padding:6px 10px;border:1px solid var(--border2);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:.9em}
 .form .inline-form input{margin-top:0}
+
+/* sign out: a visible button under the user */
+.sb-signout{display:block}
+.btn.signout{width:100%;justify-content:center;gap:8px;padding:9px 12px;color:var(--down);background:var(--down-bg);border-color:color-mix(in srgb,var(--down) 35%,transparent);font-weight:600;box-shadow:none}
+.btn.signout .ic{width:17px;height:17px}
+.btn.signout:hover{background:var(--down);border-color:var(--down);color:#fff}
+.btn.signout:focus-visible{outline:3px solid color-mix(in srgb,var(--down) 35%,transparent);outline-offset:2px}
+:root.sb-collapsed .btn.signout{width:46px;height:42px;margin:0 auto;padding:0;display:grid;place-items:center}
+:root.sb-collapsed .btn.signout span{display:none}
+@media (max-width:1100px){:root.sb-collapsed .btn.signout{width:100%;display:inline-flex}:root.sb-collapsed .btn.signout span{display:inline}}
