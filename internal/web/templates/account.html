@@ -6,11 +6,15 @@
   <h2>Profile</h2>
   <dl class="kv">
     <dt>Username</dt><dd><strong>{{$u.Username}}</strong> {{template "source" $u.Source}}</dd>
-    {{if $u.DisplayName}}<dt>Name</dt><dd>{{$u.DisplayName}}</dd>{{end}}
     {{if $u.Email}}<dt>E-mail</dt><dd>{{$u.Email}}</dd>{{end}}
     <dt>Last sign-in</dt><dd>{{fmtTime $u.LastLoginAt}}</dd>
     <dt>This session</dt><dd>{{if eq .Data.Method "oidc"}}Single sign-on{{else if eq .Data.Method "ldap"}}Directory password (LDAP){{else}}Local password{{end}}{{if $u.TOTPEnabled}} + authenticator code{{end}}</dd>
   </dl>
+  <form class="form" method="post" action="/account/name">
+    {{template "csrf" .CSRF}}
+    <label>Display name <span class="muted small">(shown in the menu and the dashboard greeting)</span>
+      <span class="inline-form"><input name="display_name" value="{{$u.DisplayName}}" maxlength="80" placeholder="e.g. Jane Doe" autocomplete="name"><button class="btn primary">Save</button></span></label>
+  </form>
   <form method="post" action="/account/sessions/revoke" data-confirm="Sign out all your other sessions?">{{template "csrf" .CSRF}}<button class="btn small">Sign out my other sessions</button></form>
 </section>
 <form class="card form" method="post" action="/account/email">

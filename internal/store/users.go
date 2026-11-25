@@ -13,6 +13,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -47,10 +49,33 @@ type User struct {
 	Email       string
 	TOTPEnabled bool
 	EmailAlerts bool
+	// CustomName is set when the display name was chosen in MonitorIQ.
+	CustomName bool
 }
 
 // IsLocal reports whether the user signs in with a password stored here.
 func (u *User) IsLocal() bool { return u.Source == SourceLocal }
+
+// Greeting is the name the dashboard greets the user with: the display name
+// chosen in MonitorIQ as typed, else the first word of the directory name
+// or of the username ("jane.doe" → "Jane").
+func (u *User) Greeting() string {
+	if u.CustomName && strings.TrimSpace(u.DisplayName) != "" {
+		return strings.TrimSpace(u.DisplayName)
+	}
+	name := strings.TrimSpace(u.DisplayName)
+	if name == "" {
+		name = strings.TrimSpace(u.Username)
+	}
+	if i := strings.IndexAny(name, " @._-"); i > 0 {
+		name = name[:i]
+	}
+	if name == "" {
+		return ""
+	}
+	r := []rune(name)
+	return strings.ToUpper(string(r[0])) + string(r[1:])
+}
 
 // Label is the display name, falling back to the username.
 func (u *User) Label() string {
@@ -60,12 +85,12 @@ func (u *User) Label() string {
 	return u.Username
 }
 
-const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled, u.email_alerts`
+const userCols = `u.id, u.username, u.created_at, u.last_login_at, u.auth_source, u.external_id, u.display_name, u.email, u.totp_enabled, u.email_alerts, u.display_name_custom`
 
 func scanUser(r pgx.Row, extra ...any) (*User, error) {
 	var u User
 	dest := append([]any{&u.ID, &u.Username, &u.CreatedAt, &u.LastLoginAt, &u.Source, &u.ExternalID,
-		&u.DisplayName, &u.Email, &u.TOTPEnabled, &u.EmailAlerts}, extra...)
+		&u.DisplayName, &u.Email, &u.TOTPEnabled, &u.EmailAlerts, &u.CustomName}, extra...)
 	if err := r.Scan(dest...); err != nil {
 		return nil, notFound(err)
 	}
@@ -89,6 +114,11 @@ func uniqueErr(err error) error {
 
 // CreateUser creates a local user with a password.
 func (s *Store) CreateUser(ctx context.Context, username, password string) (int64, error) {
+	return s.CreateUserNamed(ctx, username, "", password)
+}
+
+// CreateUserNamed creates a local user with a password and a display name.
+func (s *Store) CreateUserNamed(ctx context.Context, username, displayName, password string) (int64, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return 0, errors.New("username is required")
@@ -97,8 +127,13 @@ func (s *Store) CreateUser(ctx context.Context, username, password string) (int6
 	if err != nil {
 		return 0, err
 	}
+	displayName, err = CleanDisplayName(displayName)
+	if err != nil {
+		return 0, err
+	}
 	var id int64
-	err = s.Pool.QueryRow(ctx, `INSERT INTO users (username, password_hash) VALUES ($1,$2) RETURNING id`, username, h).Scan(&id)
+	err = s.Pool.QueryRow(ctx, `INSERT INTO users (username, password_hash, display_name, display_name_custom)
+		VALUES ($1,$2,$3,$3 <> '') RETURNING id`, username, h, displayName).Scan(&id)
 	return id, uniqueErr(err)
 }
 
@@ -130,8 +165,42 @@ func (s *Store) FindExternalUser(ctx context.Context, source, externalID, userna
 }
 
 // UpdateProfile refreshes the name and e-mail reported by the directory.
+// A display name set in MonitorIQ (SetDisplayName) is kept.
 func (s *Store) UpdateProfile(ctx context.Context, id int64, displayName, email string) error {
-	_, err := s.Pool.Exec(ctx, `UPDATE users SET display_name=$2, email=$3 WHERE id=$1`, id, displayName, email)
+	_, err := s.Pool.Exec(ctx, `UPDATE users SET display_name = CASE WHEN display_name_custom THEN display_name ELSE $2 END,
+		email=$3 WHERE id=$1`, id, displayName, email)
+	return err
+}
+
+// MaxDisplayName is the longest display name accepted, in characters.
+const MaxDisplayName = 80
+
+// CleanDisplayName trims a display name and checks its length and characters.
+func CleanDisplayName(name string) (string, error) {
+	name = strings.Join(strings.Fields(name), " ")
+	if utf8.RuneCountInString(name) > MaxDisplayName {
+		return "", errors.New("the display name can be at most 80 characters long")
+	}
+	for _, r := range name {
+		if unicode.IsControl(r) {
+			return "", errors.New("the display name contains invalid characters")
+		}
+	}
+	return name, nil
+}
+
+// SetDisplayName sets the name shown in the interface and the dashboard
+// greeting. An empty name goes back to the username (or, for LDAP and SSO
+// users, to the name the directory reports at the next sign-in).
+func (s *Store) SetDisplayName(ctx context.Context, id int64, name string) error {
+	name, err := CleanDisplayName(name)
+	if err != nil {
+		return err
+	}
+	tag, err := s.Pool.Exec(ctx, `UPDATE users SET display_name=$2, display_name_custom=($2 <> '') WHERE id=$1`, id, name)
+	if err == nil && tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
 	return err
 }
 
