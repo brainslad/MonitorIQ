@@ -100,7 +100,7 @@ Each monitor page has a map from the monitoring system to the target, with the h
 
 ### Public status pages
 
-A page to share with customers at `/status/<name>`: overall status, 90 days of daily availability, and incidents from the last 14 days. Also available as JSON and embeddable with an `<iframe>`.
+A page to share with customers at `/status/<name>`: overall status, 90 days of daily availability, and incidents from the last 14 days. It shows the logo and footer line from **Settings → Branding**. Also available as JSON at `/api/status/<name>` (not linked from the page) and embeddable with an `<iframe>`.
 
 | Light | Dark |
 |---|---|
@@ -296,8 +296,8 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 ### Customising the dashboard
 
 - **Display name:** each user can set a display name under **My account**, and administrators can set it under **Users** (also when creating a user). It is shown in the menu and in the dashboard greeting ("Good morning, Jane Doe"). Without one, the greeting uses the first part of the username. A name set in MonitorIQ is kept when LDAP or SSO report another one at sign-in.
-- **Footer:** **Settings → Branding** sets a line shown at the bottom of every page, above the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE). Without it, the footer shows only the credit.
-- **Logo:** the same page takes a logo (PNG, JPEG or GIF up to 5 MB, shrunk automatically to at most 600 × 150 px; SVG or WebP up to 512 KB; optionally a second one for the dark theme), shown at a fixed height whatever its size. **Reset to the default logos** brings back the MonitorIQ logo. It replaces the MonitorIQ logo in the menu and on the sign-in page, and the slogan *Know before your users do.* stays underneath.
+- **Footer:** **Settings → Branding** sets a line shown at the bottom of every page (including the sign-in page and the public status pages), above the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE). Without it, the footer shows only the credit.
+- **Logo:** the same page takes a logo (PNG, JPEG or GIF up to 5 MB, shrunk automatically to at most 600 × 150 px; SVG or WebP up to 512 KB; optionally a second one for the dark theme), shown at a fixed height whatever its size. **Reset to the default logos** brings back the MonitorIQ logo. It replaces the MonitorIQ logo in the menu, on the sign-in page and on the public status pages, and the slogan *Know before your users do.* stays underneath.
 - **Drill-down:** click a column of *Checks and response time* to see, for that hour (or 6 hours / day), each monitor's checks by result and response time, and the status changes and failed or degraded checks recorded then. The arrows step to the previous and next column.
 - **Sign out:** the red button next to your name at the bottom of the menu.
 - **Availability map:** the gear button on the card lets each user pick up to 10 monitors, in order. Free rows are filled with other monitors at random; the random choice stays the same for the day.
