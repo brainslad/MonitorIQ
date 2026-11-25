@@ -13,8 +13,8 @@
     {{if $b.LogoDark}}<label class="check"><input type="checkbox" name="remove_logo_dark" value="1"> Remove the dark theme logo</label>{{end}}
   </fieldset>
   <fieldset><legend>Footer</legend>
-    <label>Footer line<input name="footer" maxlength="{{.Data.MaxFooter}}" value="{{$b.FooterLine}}" placeholder="{{.Data.Slogan}}" data-footer-input></label>
-    <p class="muted small m0">Shown after “MonitorIQ by Brainslad” at the bottom of every page. Leave empty for “{{.Data.Slogan}}”. The author credit itself always stays (licence term, see NOTICE).</p>
+    <label>Footer line<input name="footer" maxlength="{{.Data.MaxFooter}}" value="{{$b.FooterLine}}" placeholder="e.g. Contoso NOC · 24/7 support" data-footer-input></label>
+    <p class="muted small m0">Shown at the bottom of every page, above “MonitorIQ by Brainslad”. Leave empty to show only that credit, which always stays (licence term, see NOTICE).</p>
   </fieldset>
   <div class="form-actions"><button class="btn primary">Save</button></div>
 </form>
@@ -31,7 +31,7 @@
       <div class="brand{{if $b.Logo}} custom{{end}}" data-preview="dark">{{template "brand-mark" $b}}</div>
     </div>
   </div>
-  <p class="footer muted small bp-footer">{{template "credit" .Version}} · <span data-footer-preview>{{$b.FooterLine}}</span></p>
+  <div class="footer muted small bp-footer"><div class="footer-line" data-footer-preview{{if not $b.FooterLine}} hidden{{end}}>{{$b.FooterLine}}</div><div class="footer-credit">{{template "credit" .Version}}</div></div>
 </section>
 </div>
 {{template "bottom" .}}

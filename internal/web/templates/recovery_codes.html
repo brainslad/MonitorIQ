@@ -15,7 +15,7 @@
     <a class="btn primary" href="{{.Data.Next}}">I saved them, continue</a>
   </div>
 </div>
-{{if .Data.Standalone}}<footer class="footer muted small center-credit">{{template "credit" ""}} · {{.Brand.FooterLine}}</footer>
+{{if .Data.Standalone}}{{template "footer" .}}
 <script src="/static/app.js"></script>
 </body>
 </html>{{else}}{{template "bottom" .}}{{end}}

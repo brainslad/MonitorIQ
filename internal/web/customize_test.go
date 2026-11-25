@@ -43,7 +43,7 @@ func TestCleanFooter(t *testing.T) {
 	if _, err := cleanFooter("a\x00b"); err == nil {
 		t.Error("control character accepted")
 	}
-	if (Branding{}).FooterLine() != defaultSlogan || (Branding{Footer: "x"}).FooterLine() != "x" {
+	if (Branding{}).FooterLine() != "" || (Branding{Footer: "x"}).FooterLine() != "x" {
 		t.Error("FooterLine")
 	}
 }
