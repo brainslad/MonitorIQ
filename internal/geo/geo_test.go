@@ -242,7 +242,7 @@ func TestMapFitting(t *testing.T) {
 	if len(m.Lines) != 1 || !strings.HasPrefix(m.Lines[0].D, "M") {
 		t.Fatalf("lines: %+v", m.Lines)
 	}
-	if m.VW >= MapW || m.VW < 150 || math.Abs(m.VW/m.VH-MapW/390) > 1e-9 {
+	if m.VW >= MapW || m.VW < minFitW || math.Abs(m.VW/m.VH-MapW/390) > 1e-9 {
 		t.Fatalf("zoom: %v", m.ViewBox())
 	}
 	for _, mk := range m.Markers {
