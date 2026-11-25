@@ -592,12 +592,12 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 			s.flash(w, r, "/admin/users", false, "Passwords do not match.")
 			return
 		}
-		_, err = s.Store.CreateUserNamed(r.Context(), username, r.PostFormValue("display_name"), r.PostFormValue("password"), store.RoleAdmin)
+		_, err = s.Store.CreateUserNamed(r.Context(), username, r.PostFormValue("display_name"), r.PostFormValue("password"), r.PostFormValue("role"))
 	} else {
 		var name string
 		if name, err = store.CleanDisplayName(r.PostFormValue("display_name")); err == nil {
 			var u *store.User
-			if u, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", "", store.RoleAdmin); err == nil && name != "" {
+			if u, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", "", r.PostFormValue("role")); err == nil && name != "" {
 				err = s.Store.SetDisplayName(r.Context(), u.ID, name)
 			}
 		}
@@ -620,6 +620,25 @@ func (s *Server) handleUserRename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.flash(w, r, "/admin/users", true, "Display name saved.")
+}
+
+// handleUserRole makes another user an administrator or read-only. Your own
+// role cannot be changed here, so an administrator cannot lock themselves out.
+func (s *Server) handleUserRole(w http.ResponseWriter, r *http.Request) {
+	id := pathID(r)
+	if id == userFrom(r).ID {
+		s.flash(w, r, "/admin/users", false, "Another administrator has to change your role.")
+		return
+	}
+	if err := s.Store.SetRole(r.Context(), id, r.PostFormValue("role")); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		s.flash(w, r, "/admin/users", false, capitalize(err.Error())+".")
+		return
+	}
+	s.flash(w, r, "/admin/users", true, "Role saved.")
 }
 
 // handleAccountName sets the signed-in user's own display name.

@@ -7,10 +7,10 @@
     <div class="muted">{{if $m.GroupID}}<a class="gtag gc-{{$m.GroupColor}}" href="/admin/monitors?group={{$m.GroupID}}">{{$m.GroupName}}</a> {{end}}{{template "tbadge" $m.Type}} {{typeLabel $m.Type}} · <span class="mono">{{$m.EffectiveTarget}}{{if $m.Port}}:{{$m.Port}}{{end}}</span> · every {{$m.IntervalSeconds}}s</div>
   </div>
   <div class="actions">
-    <form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Check now</button></form>
-    <form method="post" action="/admin/monitors/{{$m.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/monitors/{{$m.ID}}"><button class="btn">{{if $m.Enabled}}Pause{{else}}Resume{{end}}</button></form>
+    {{if $.User.IsAdmin}}<form method="post" action="/monitors/{{$m.ID}}/check">{{template "csrf" $csrf}}<button class="btn">Check now</button></form>
+    <form method="post" action="/admin/monitors/{{$m.ID}}/toggle">{{template "csrf" $csrf}}<input type="hidden" name="back" value="/monitors/{{$m.ID}}"><button class="btn">{{if $m.Enabled}}Pause{{else}}Resume{{end}}</button></form>{{end}}
     <a class="btn" href="/export?monitor={{$m.ID}}" title="Export this monitor's data to Excel">{{template "icon" "download"}} Export</a>
-    <a class="btn primary" href="/admin/monitors/{{$m.ID}}/edit">Edit</a>
+    {{if $.User.IsAdmin}}<a class="btn primary" href="/admin/monitors/{{$m.ID}}/edit">Edit</a>{{end}}
   </div>
 </div>
 
@@ -41,9 +41,9 @@
 <section class="card geo-card" id="location">
   <div class="card-head">
     <div><h2>Network location</h2><p class="muted small">Where the checks go: from this monitoring system to the target</p></div>
-    <a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "settings"}}</a>
+    {{if $.User.IsAdmin}}<a class="icon-btn" href="/admin/geo" title="Geolocation settings" aria-label="Geolocation settings">{{template "icon" "settings"}}</a>{{end}}
   </div>
-  {{if not $g.DB.Ready}}<div class="note small">No geolocation database yet, so addresses cannot be placed on the map. <a href="/admin/geo">Download the free DB-IP Lite database</a> under Settings → Geolocation.</div>{{end}}
+  {{if not $g.DB.Ready}}<div class="note small">No geolocation database yet, so addresses cannot be placed on the map.{{if $.User.IsAdmin}} <a href="/admin/geo">Download the free DB-IP Lite database</a> under Settings → Geolocation.{{end}}</div>{{end}}
   <div class="geo-wrap">
     <div class="geo-mapbox">
       {{if $g.Map.Empty}}<div class="geo-empty muted small">Nothing to place on the map yet: {{if not $g.DB.Ready}}the database is missing{{else if not $g.Probe.Located}}the location of this server is unknown (set it under Settings → Geolocation){{else}}the target has no known location{{end}}.</div>{{end}}

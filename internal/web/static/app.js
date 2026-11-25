@@ -296,6 +296,11 @@
     hpSync();
   }
 
+  // Selects that save their form as soon as they change (user roles).
+  document.querySelectorAll("select[data-autosubmit]").forEach(function (sel) {
+    sel.addEventListener("change", function () { if (sel.form) sel.form.submit(); });
+  });
+
   // ---------------------------------------------------------------- branding preview
   var bf = document.querySelector("[data-branding-form]");
   if (bf) {

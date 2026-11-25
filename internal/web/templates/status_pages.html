@@ -1,9 +1,9 @@
 {{template "top" .}}{{$csrf := .CSRF}}{{$base := .Data.BaseURL}}
-<div class="page-head"><h1>Status pages</h1><div class="actions"><a class="btn primary" href="/admin/status-pages/new">+ New status page</a></div></div>
+<div class="page-head"><h1>Status pages</h1><div class="actions">{{if $.User.IsAdmin}}<a class="btn primary" href="/admin/status-pages/new">+ New status page</a>{{end}}</div></div>
 <p class="muted">Public pages to share service status with customers and users, no login required.</p>
 <section class="card">
 <div class="table-wrap"><table class="table">
-  <thead><tr><th>Title</th><th>Public URL</th><th class="num">Monitors</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Title</th><th>Public URL</th><th class="num">Monitors</th><th>Status</th>{{if $.User.IsAdmin}}<th></th>{{end}}</tr></thead>
   <tbody>
   {{range .Data.Pages}}
   <tr>
@@ -11,10 +11,10 @@
     <td class="mono small"><a href="/status/{{.Slug}}" target="_blank" rel="noopener">{{$base}}/status/{{.Slug}}</a></td>
     <td class="num">{{len .Monitors}}</td>
     <td>{{if .Published}}<span class="badge up">Published</span>{{else}}<span class="badge unknown">Draft</span>{{end}}</td>
-    <td class="row-actions">
+    {{if $.User.IsAdmin}}<td class="row-actions">
       <a class="btn small" href="/admin/status-pages/{{.ID}}/edit">Edit</a>
       <form method="post" action="/admin/status-pages/{{.ID}}/delete" data-confirm="Delete status page {{.Title}}?">{{template "csrf" $csrf}}<button class="btn small danger">Delete</button></form>
-    </td>
+    </td>{{end}}
   </tr>
   {{else}}<tr><td colspan="5" class="muted">No status pages yet.</td></tr>{{end}}
   </tbody>
