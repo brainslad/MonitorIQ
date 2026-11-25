@@ -6,10 +6,13 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brainslad/monitoriq/internal/store"
 )
 
 func TestSafeNext(t *testing.T) {
@@ -83,6 +86,30 @@ func TestStaticVersioned(t *testing.T) {
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != 200 || rec.Header().Get("Cache-Control") != want {
 			t.Errorf("GET %s = %d %q, want %q", path, rec.Code, rec.Header().Get("Cache-Control"), want)
+		}
+	}
+}
+
+func TestRequireAdmin(t *testing.T) {
+	s := &Server{}
+	ok := s.requireAdmin(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	for _, c := range []struct {
+		role, method, path string
+		want               int
+	}{
+		{store.RoleAdmin, http.MethodPost, "/admin/hosts/new", http.StatusNoContent},
+		{store.RoleAdmin, http.MethodGet, "/admin/users", http.StatusNoContent},
+		{store.RoleViewer, http.MethodPost, "/admin/hosts/new", http.StatusForbidden},
+		{store.RoleViewer, http.MethodPost, "/monitors/1/check", http.StatusForbidden},
+		{store.RoleViewer, http.MethodGet, "/api/anything", http.StatusForbidden},
+		{"", http.MethodPost, "/admin/users", http.StatusForbidden},
+	} {
+		r := httptest.NewRequest(c.method, c.path, nil)
+		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &store.User{Role: c.role}))
+		rec := httptest.NewRecorder()
+		ok(rec, r)
+		if rec.Code != c.want {
+			t.Errorf("%s %s as %q = %d, want %d", c.method, c.path, c.role, rec.Code, c.want)
 		}
 	}
 }
