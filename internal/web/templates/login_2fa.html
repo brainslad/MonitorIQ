@@ -1,7 +1,7 @@
 {{template "head" .}}
 <body class="center-page">
 <div class="card login{{if eq .Data.Mode "enroll"}} wide-login{{end}}">
-  <div class="brand big"><span class="logo"><img src="/static/favicon.svg" alt="" width="22" height="22"></span><span><span class="brand-name">Monitor<em>IQ</em></span><span class="brand-sub">Know before your users do.</span></span></div>
+  <div class="brand big{{if .Brand.Logo}} custom{{end}}">{{template "brand-mark" .Brand}}</div>
   {{if .Flash}}<div class="flash err">{{.Flash}}</div>{{end}}
   <form method="post" action="/login/2fa">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
