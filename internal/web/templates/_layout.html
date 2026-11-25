@@ -49,8 +49,8 @@
     <div class="sb-user">
       <a class="avatar" href="/account" title="My account">{{initials .User.Label}}{{if .User.TOTPEnabled}}<i class="avatar-ok" title="2FA on"></i>{{end}}</a>
       <a class="sb-user-text" href="/account"><strong>{{.User.Label}}</strong><small>{{if eq .User.Source "ldap"}}Directory account{{else if eq .User.Source "oidc"}}Single sign-on{{else}}Local account{{end}}{{if .User.TOTPEnabled}} · 2FA{{end}}</small></a>
-      <form method="post" action="/logout" class="m0">{{template "csrf" .CSRF}}<button class="icon-btn ghost" type="submit" title="Sign out" aria-label="Sign out">{{template "icon" "logout"}}</button></form>
     </div>
+    <form method="post" action="/logout" class="m0 sb-signout">{{template "csrf" .CSRF}}<button class="btn signout" type="submit" title="Sign out" aria-label="Sign out">{{template "icon" "logout"}}<span>Sign out</span></button></form>
   </div>
 </aside>
 <div class="sb-overlay" data-sidebar-close></div>
