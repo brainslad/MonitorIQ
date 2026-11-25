@@ -65,6 +65,7 @@ type Server struct {
 
 	pages   map[string]*template.Template
 	limiter *loginLimiter
+	brand   brandCache
 }
 
 func New(st *store.Store, cfg *config.Config, box *auth.Box, log *slog.Logger) (*Server, error) {
@@ -189,6 +190,8 @@ func (s *Server) Handler() http.Handler {
 	auth("POST /admin/email", s.handleEmailSettingsSave)
 	auth("POST /admin/email/test", s.handleEmailTest)
 	auth("POST /account/email", s.handleAccountEmail)
+	auth("GET /admin/branding", s.handleBrandingForm)
+	auth("POST /admin/branding", s.handleBrandingSave)
 	auth("GET /admin/geo", s.handleGeoSettings)
 	auth("POST /admin/geo", s.handleGeoSettingsSave)
 	auth("POST /admin/geo/update", s.handleGeoUpdate)
@@ -477,6 +480,7 @@ type page struct {
 	Version string
 	Refresh int
 	Nav     store.NavCounts
+	Brand   Branding
 	Data    map[string]any
 }
 
@@ -498,6 +502,7 @@ func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, code int, 
 		}
 	}
 	p.Version = Version
+	p.Brand = s.branding(r.Context())
 	if p.Flash == "" {
 		if c, err := r.Cookie(flashCookie); err == nil {
 			if v, err := url.QueryUnescape(c.Value); err == nil && len(v) > 1 {

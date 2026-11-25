@@ -740,3 +740,6 @@ body.has-bulk main{padding-bottom:90px}
 :root.sb-collapsed .btn.signout{width:46px;height:42px;margin:0 auto;padding:0;display:grid;place-items:center}
 :root.sb-collapsed .btn.signout span{display:none}
 @media (max-width:1100px){:root.sb-collapsed .btn.signout{width:100%;display:inline-flex}:root.sb-collapsed .btn.signout span{display:inline}}
+
+/* footer line preview (Settings → Branding) */
+.bp-footer{padding-top:8px;border-top:1px dashed var(--border)}

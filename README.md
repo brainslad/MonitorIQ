@@ -294,6 +294,7 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 ### Customising the dashboard
 
 - **Display name:** each user can set a display name under **My account**, and administrators can set it under **Users** (also when creating a user). It is shown in the menu and in the dashboard greeting ("Good morning, Jane Doe"). Without one, the greeting uses the first part of the username. A name set in MonitorIQ is kept when LDAP or SSO report another one at sign-in.
+- **Footer:** **Settings → Branding** sets the footer line shown after the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE).
 
 ### Command line
 

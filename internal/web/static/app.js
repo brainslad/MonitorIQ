@@ -243,6 +243,13 @@
     });
   });
 
+  // ---------------------------------------------------------------- branding preview
+  var bf = document.querySelector("[data-branding-form]");
+  if (bf) {
+    var fi = bf.querySelector("[data-footer-input]"), fp = document.querySelector("[data-footer-preview]");
+    if (fi && fp) fi.addEventListener("input", function () { fp.textContent = fi.value.trim() || fi.getAttribute("placeholder"); });
+  }
+
   // ---------------------------------------------------------------- auto refresh (dashboard)
   if (document.getElementById("dash-chart")) {
     setInterval(function () {
