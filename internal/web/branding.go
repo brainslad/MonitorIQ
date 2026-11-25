@@ -22,7 +22,7 @@ import (
 	"unicode/utf8"
 )
 
-// The slogan shown under the logo and, by default, in the footer.
+// The slogan shown under the logo.
 const defaultSlogan = "Know before your users do."
 
 const (
@@ -51,13 +51,9 @@ type Branding struct {
 	LogoDark *logoInfo `json:"logo_dark,omitempty"`
 }
 
-// FooterLine is the text after the credit in the footer.
-func (b Branding) FooterLine() string {
-	if b.Footer == "" {
-		return defaultSlogan
-	}
-	return b.Footer
-}
+// FooterLine is the custom line shown above the credit in the footer
+// ("" when none is set: the footer then shows only the credit).
+func (b Branding) FooterLine() string { return b.Footer }
 
 // Slogan is the line under the logo; it does not change.
 func (b Branding) Slogan() string { return defaultSlogan }
@@ -253,9 +249,6 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b.Footer = footer
-	if footer == defaultSlogan {
-		b.Footer = ""
-	}
 	for _, l := range []struct {
 		field, remove, key string
 		info               **logoInfo
