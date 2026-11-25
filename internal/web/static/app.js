@@ -300,7 +300,7 @@
   var bf = document.querySelector("[data-branding-form]");
   if (bf) {
     var fi = bf.querySelector("[data-footer-input]"), fp = document.querySelector("[data-footer-preview]");
-    if (fi && fp) fi.addEventListener("input", function () { fp.textContent = fi.value.trim() || fi.getAttribute("placeholder"); });
+    if (fi && fp) fi.addEventListener("input", function () { fp.textContent = fi.value.trim(); fp.hidden = !fp.textContent; });
     var showLogo = function (which, url) {
       document.querySelectorAll('[data-preview]').forEach(function (box) {
         var mode = box.getAttribute("data-preview");

@@ -78,7 +78,7 @@
 
 {{define "bottom"}}
 </main>
-<footer class="footer muted small">{{template "credit" .Version}} · {{.Brand.FooterLine}}</footer>
+{{template "footer" .}}
 </div>
 </div>
 <script src="/static/app.js"></script>
@@ -86,6 +86,8 @@
 </html>{{end}}
 
 {{/* Author attribution: GPL-3.0 section 7(b) additional term, see NOTICE. Keep it in modified versions. */}}
+{{/* Page footer: the custom line (Settings → Branding) with the credit underneath. */}}
+{{define "footer"}}<footer class="footer muted small{{if not .User}} center-credit{{end}}">{{with .Brand.FooterLine}}<div class="footer-line">{{.}}</div>{{end}}<div class="footer-credit">{{if .User}}{{template "credit" .Version}}{{else}}{{template "credit" ""}}{{end}}</div></footer>{{end}}
 {{define "credit"}}<span class="credit"><a href="https://github.com/brainslad/MonitorIQ" rel="noopener">MonitorIQ</a>{{if .}} {{.}}{{end}} by <a href="https://github.com/brainslad" rel="noopener">Brainslad</a></span>{{end}}
 {{/* The logo (built-in or custom) with the slogan underneath. Takes a Branding. */}}
 {{define "brand-mark"}}{{if .Logo}}<span class="brand-text"><span class="brand-logo">{{if eq .LogoURL .LogoDarkURL}}<img src="{{.LogoURL}}" alt="Logo">{{else}}<img class="for-light" src="{{.LogoURL}}" alt="Logo"><img class="for-dark" src="{{.LogoDarkURL}}" alt="Logo">{{end}}</span><span class="brand-sub">{{.Slogan}}</span></span><span class="logo mini"><img src="{{.LogoDarkURL}}" alt="" width="22" height="22"></span>

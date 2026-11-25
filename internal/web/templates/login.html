@@ -18,7 +18,7 @@
   <p class="muted small center"><a href="/login?local=1&amp;next={{.Data.Next}}">Sign in with a local account</a></p>
   {{end}}
 </div>
-<footer class="footer muted small center-credit">{{template "credit" ""}} · {{.Brand.FooterLine}}</footer>
+{{template "footer" .}}
 <script src="/static/app.js"></script>
 </body>
 </html>

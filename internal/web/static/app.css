@@ -817,3 +817,7 @@ button.chip-select:hover,button.chip-select[aria-expanded="true"]{color:var(--te
 .heat-name .pin{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:middle}
 .hp-list input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;flex:none}
 .heat-card.picking{z-index:40}
+
+/* footer: the custom line above the author credit */
+.footer-line{color:var(--text);opacity:.8;margin-bottom:3px}
+.footer-line[hidden]{display:none}
