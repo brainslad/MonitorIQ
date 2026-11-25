@@ -8,6 +8,7 @@ package web
 import (
 	"errors"
 	"math"
+	"math/rand/v2"
 	"net/http"
 	"sort"
 	"strconv"
@@ -79,9 +80,91 @@ type hostRow struct {
 
 // heatRow is one line of the availability map.
 type heatRow struct {
-	ID    int64
-	Name  string
-	Cells []store.DayStat
+	ID     int64
+	Name   string
+	Cells  []store.DayStat
+	Pinned bool
+}
+
+// heatChoice is one monitor in the availability map picker.
+type heatChoice struct {
+	ID      int64
+	Name    string
+	Host    string
+	Enabled bool
+	Pos     int // 1-based position among the pinned monitors, 0 if not pinned
+}
+
+type heatPick struct {
+	store.Monitor
+	pinned bool
+}
+
+// pickHeat chooses the rows of the availability map: the enabled monitors
+// the user pinned, in their order, then other enabled monitors at random
+// until there are store.MaxHeatMonitors. The random part is stable for a
+// user during a day, so the map does not reshuffle at every refresh.
+func pickHeat(list []store.Monitor, pinned []int64, userID int64, now time.Time) []heatPick {
+	byID := map[int64]store.Monitor{}
+	for _, m := range list {
+		if m.Enabled {
+			byID[m.ID] = m
+		}
+	}
+	out := make([]heatPick, 0, store.MaxHeatMonitors)
+	used := map[int64]bool{}
+	for _, id := range pinned {
+		if m, ok := byID[id]; ok && !used[id] && len(out) < store.MaxHeatMonitors {
+			out = append(out, heatPick{m, true})
+			used[id] = true
+		}
+	}
+	var rest []store.Monitor
+	for _, m := range list {
+		if m.Enabled && !used[m.ID] {
+			rest = append(rest, m)
+		}
+	}
+	sort.Slice(rest, func(i, j int) bool { return rest[i].ID < rest[j].ID })
+	y, d := now.Year(), now.YearDay()
+	rng := rand.New(rand.NewPCG(uint64(userID), uint64(y*1000+d)))
+	rng.Shuffle(len(rest), func(i, j int) { rest[i], rest[j] = rest[j], rest[i] })
+	for _, m := range rest {
+		if len(out) == store.MaxHeatMonitors {
+			break
+		}
+		out = append(out, heatPick{m, false})
+	}
+	return out
+}
+
+// handleHeatMonitorsSave stores the monitors a user pinned to the map.
+func (s *Server) handleHeatMonitorsSave(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	var ids []int64
+	if !formBool(r, "reset") {
+		for _, v := range r.PostForm["monitor"] {
+			if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+				ids = append(ids, id)
+			}
+		}
+	}
+	if len(ids) > store.MaxHeatMonitors {
+		s.flash(w, r, "/#availability", false, "Choose at most 10 monitors for the availability map.")
+		return
+	}
+	if err := s.Store.SetHeatMonitors(r.Context(), userFrom(r).ID, ids); err != nil {
+		s.serverError(w, err)
+		return
+	}
+	msg := "Availability map saved."
+	if len(ids) == 0 {
+		msg = "The availability map now shows monitors at random."
+	}
+	s.flash(w, r, "/#availability", true, msg)
 }
 
 // certStep is one marker of the certificate renewal stepper.
@@ -237,14 +320,17 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		hosts = hosts[:4]
 	}
 
-	// Availability map: the enabled monitors (problems first), hour by hour.
+	// Availability map: the monitors the user pinned, then others at random.
+	pinned, err := s.Store.HeatMonitors(ctx, userFrom(r).ID)
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	heatList := pickHeat(list, pinned, userFrom(r).ID, now)
 	var heat []heatRow
 	cells, fullHours := 0, 0
-	for _, m := range list {
-		if !m.Enabled || len(heat) == 10 {
-			continue
-		}
-		row := heatRow{ID: m.ID, Name: m.Name, Cells: bars[m.ID]}
+	for _, m := range heatList {
+		row := heatRow{ID: m.ID, Name: m.Name, Cells: bars[m.ID], Pinned: m.pinned}
 		for _, c := range row.Cells {
 			if c.Total > 0 {
 				cells++
@@ -254,6 +340,31 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		heat = append(heat, row)
+	}
+	// The picker lists every monitor, pinned ones first in their order.
+	pinPos := map[int64]int{}
+	for i, id := range pinned {
+		pinPos[id] = i + 1
+	}
+	heatChoices := make([]heatChoice, 0, len(list))
+	for _, m := range list {
+		heatChoices = append(heatChoices, heatChoice{ID: m.ID, Name: m.Name, Host: m.HostName, Enabled: m.Enabled, Pos: pinPos[m.ID]})
+	}
+	sort.SliceStable(heatChoices, func(i, j int) bool {
+		a, b := heatChoices[i], heatChoices[j]
+		if (a.Pos > 0) != (b.Pos > 0) {
+			return a.Pos > 0
+		}
+		if a.Pos != b.Pos {
+			return a.Pos < b.Pos
+		}
+		return strings.ToLower(a.Name) < strings.ToLower(b.Name)
+	})
+	pinnedN := 0
+	for _, c := range heatChoices {
+		if c.Pos > 0 && c.Enabled {
+			pinnedN++
+		}
 	}
 	heatPct := -1.0
 	if cells > 0 {
@@ -366,6 +477,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"Incidents": incidents, "Types": typeList, "Now": now,
 		"Hosts": hosts, "Heat": heat, "HeatPct": heatPct, "Certs": certData,
 		"HeatHours": hourTicks(now), "IncRows": incs, "Geo": s.dashboardGeo(ctx, list),
+		"HeatChoices": heatChoices, "HeatPinned": pinnedN, "HeatMax": store.MaxHeatMonitors,
 	}}
 	s.renderStatus(w, r, http.StatusOK, "dashboard", p)
 }

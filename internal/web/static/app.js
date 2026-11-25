@@ -243,6 +243,59 @@
     });
   });
 
+  // ---------------------------------------------------------------- availability map picker
+  var hp = document.querySelector("[data-heat-picker]"), hpOpen = document.querySelector("[data-heat-open]");
+  if (hp && hpOpen) {
+    var hpMax = parseInt(hp.getAttribute("data-max"), 10) || 10;
+    var hpBoxes = Array.prototype.slice.call(hp.querySelectorAll('input[name="monitor"]'));
+    // Ticked order: pinned monitors keep their position, new ones go last.
+    var order = hpBoxes.filter(function (b) { return b.checked; })
+      .sort(function (a, b) { return a.getAttribute("data-pos") - b.getAttribute("data-pos"); });
+    var hpSync = function () {
+      hpBoxes.forEach(function (b) {
+        var li = b.closest("li"), at = order.indexOf(b);
+        li.classList.toggle("on", at >= 0);
+        li.querySelector(".hp-pos").textContent = at >= 0 ? at + 1 : "";
+        if (!b.checked && b.getAttribute("data-off") !== "1") b.disabled = order.length >= hpMax;
+      });
+      hp.classList.toggle("full", order.length >= hpMax);
+      hp.querySelector("[data-heat-count]").textContent = order.length;
+    };
+    hpBoxes.forEach(function (b) {
+      if (b.disabled) b.setAttribute("data-off", "1");
+      b.addEventListener("change", function () {
+        var at = order.indexOf(b);
+        if (b.checked && at < 0) order.push(b);
+        if (!b.checked && at >= 0) order.splice(at, 1);
+        hpSync();
+      });
+    });
+    // Send the monitors in the ticked order.
+    hp.addEventListener("submit", function () {
+      order.forEach(function (b) { b.name = ""; });
+      order.forEach(function (b) {
+        var h = document.createElement("input");
+        h.type = "hidden"; h.name = "monitor"; h.value = b.value;
+        hp.appendChild(h);
+      });
+    });
+    var hpToggle = function (show) {
+      hp.hidden = !show;
+      var card = hp.closest(".card"); if (card) card.classList.toggle("picking", show);
+      hpOpen.setAttribute("aria-expanded", show ? "true" : "false");
+      if (show) { var f = hp.querySelector("[data-heat-filter]"); if (f) f.focus(); }
+    };
+    hpOpen.addEventListener("click", function () { hpToggle(hp.hidden); });
+    hp.querySelector("[data-heat-cancel]").addEventListener("click", function () { hpToggle(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !hp.hidden) hpToggle(false); });
+    var hf = hp.querySelector("[data-heat-filter]");
+    if (hf) hf.addEventListener("input", function () {
+      var v = hf.value.trim().toLowerCase();
+      hp.querySelectorAll(".hp-list li").forEach(function (li) { li.hidden = v && li.getAttribute("data-text").toLowerCase().indexOf(v) < 0; });
+    });
+    hpSync();
+  }
+
   // ---------------------------------------------------------------- branding preview
   var bf = document.querySelector("[data-branding-form]");
   if (bf) {
@@ -285,8 +338,8 @@
     setInterval(function () {
       var a = document.activeElement;
       if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      // Keep an open drill-down on screen.
-      if (document.querySelector("[data-drill]:not([hidden])")) return;
+      // Keep an open drill-down or availability map picker on screen.
+      if (document.querySelector("[data-drill]:not([hidden]), [data-heat-picker]:not([hidden])")) return;
       if (document.visibilityState === "visible") window.location.reload();
     }, 60000);
   }

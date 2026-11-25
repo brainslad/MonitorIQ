@@ -9,6 +9,9 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/brainslad/monitoriq/internal/store"
 )
 
 func TestLogoType(t *testing.T) {
@@ -42,5 +45,46 @@ func TestCleanFooter(t *testing.T) {
 	}
 	if (Branding{}).FooterLine() != defaultSlogan || (Branding{Footer: "x"}).FooterLine() != "x" {
 		t.Error("FooterLine")
+	}
+}
+
+func TestPickHeat(t *testing.T) {
+	var list []store.Monitor
+	for i := int64(1); i <= 25; i++ {
+		list = append(list, store.Monitor{ID: i, Name: "m", Enabled: i != 4})
+	}
+	now := time.Date(2026, 11, 25, 15, 0, 0, 0, time.UTC)
+	got := pickHeat(list, []int64{7, 4, 99, 3, 7}, 1, now)
+	if len(got) != store.MaxHeatMonitors {
+		t.Fatalf("len = %d", len(got))
+	}
+	// Pinned first and in order; paused (4), unknown (99) and repeated ids are skipped.
+	if got[0].ID != 7 || !got[0].pinned || got[1].ID != 3 || !got[1].pinned || got[2].pinned {
+		t.Fatalf("pinned rows: %+v", got[:3])
+	}
+	seen := map[int64]bool{}
+	for _, h := range got {
+		if seen[h.ID] || h.ID == 4 {
+			t.Fatalf("duplicate or paused monitor %d", h.ID)
+		}
+		seen[h.ID] = true
+	}
+	// The random part is stable during a day and differs between users.
+	again := pickHeat(list, []int64{7, 3}, 1, now.Add(2*time.Hour))
+	for i := range got {
+		if got[i].ID != again[i].ID {
+			t.Fatal("random fill changed within the same day")
+		}
+	}
+	other := pickHeat(list, nil, 2, now)
+	same := true
+	for i := range other {
+		same = same && other[i].ID == pickHeat(list, nil, 1, now)[i].ID
+	}
+	if same {
+		t.Error("two users got the same random fill")
+	}
+	if n := len(pickHeat(list[:4], nil, 1, now)); n != 3 {
+		t.Errorf("small fleet: %d rows, want 3", n)
 	}
 }

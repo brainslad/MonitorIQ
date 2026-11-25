@@ -136,6 +136,7 @@ func (s *Server) Handler() http.Handler {
 	auth("GET /api/monitors/{id}/series", s.handleSeries)
 	auth("GET /api/dashboard/series", s.handleDashboardSeries)
 	auth("GET /api/dashboard/drill", s.handleDashboardDrill)
+	auth("POST /dashboard/heat-monitors", s.handleHeatMonitorsSave)
 	auth("GET /export", s.handleExportForm)
 	auth("GET /export/download", s.handleExportDownload)
 

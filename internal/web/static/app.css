@@ -795,3 +795,25 @@ body.has-bulk main{padding-bottom:90px}
 .drill.loading .drill-body{opacity:.5}
 @media (max-width:900px){.drill-body{grid-template-columns:1fr}}
 .drill-table-wrap thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+
+/* availability map picker */
+.heat-card{position:relative}
+button.chip-select{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.8em;cursor:pointer}
+button.chip-select .ic{width:14px;height:14px}
+button.chip-select:hover,button.chip-select[aria-expanded="true"]{color:var(--text);border-color:var(--border2)}
+.heat-picker{position:absolute;z-index:20;top:64px;right:16px;left:16px;max-width:380px;margin-left:auto;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--border2);box-shadow:var(--shadow)}
+.heat-picker[hidden]{display:none}
+.hp-head{display:flex;justify-content:space-between;align-items:baseline}
+.heat-picker .search{min-width:0;width:100%}
+.hp-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px}
+.hp-list li{border-bottom:1px solid var(--border)}.hp-list li:last-child{border-bottom:0}
+.hp-list label.check{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:.88em;cursor:pointer;margin:0}
+.hp-list label.check span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-list input:disabled + span{opacity:.55}
+.hp-pos{min-width:20px;height:20px;border-radius:6px;display:none;place-items:center;font-size:.72rem;background:var(--accent-strong);color:#fff}
+.hp-list li.on .hp-pos{display:grid}
+.heat-picker.full li:not(.on) label{opacity:.55}
+.heat-picker .form-actions{margin-top:2px}
+.heat-name .pin{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:middle}
+.hp-list input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;flex:none}
+.heat-card.picking{z-index:40}

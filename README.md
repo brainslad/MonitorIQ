@@ -297,6 +297,7 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 - **Footer:** **Settings → Branding** sets the footer line shown after the *MonitorIQ by Brainslad* credit, which always stays (see NOTICE).
 - **Logo:** the same page takes a logo (PNG, JPEG, GIF, WebP or SVG, up to 512 KB; optionally a second one for the dark theme). It replaces the MonitorIQ logo in the menu and on the sign-in page, and the slogan *Know before your users do.* stays underneath.
 - **Drill-down:** click a column of *Checks and response time* to see, for that hour (or 6 hours / day), each monitor's checks by result and response time, and the status changes and failed or degraded checks recorded then. The arrows step to the previous and next column.
+- **Availability map:** the gear button on the card lets each user pick up to 10 monitors, in order. Free rows are filled with other monitors at random; the random choice stays the same for the day.
 
 ### Command line
 
