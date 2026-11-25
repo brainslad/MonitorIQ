@@ -766,3 +766,32 @@ body.has-bulk main{padding-bottom:90px}
 .bp-light .for-light,.bp-dark .for-dark{display:block!important}
 .brand-preview .logo.mini{display:none!important}
 @media (max-width:640px){.brand-preview{grid-template-columns:1fr}}
+
+/* chart drill-down */
+#dash-chart{cursor:pointer}
+.drill[hidden]{display:none}
+.drill-table-wrap{max-height:340px;overflow-y:auto}
+.drill-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.drill-head h3{margin:0;font-size:1.02rem}
+.drill-head p{margin:2px 0 0}
+.drill-nav{display:flex;gap:6px}
+.drill-nav .icon-btn{width:34px;height:34px;border-radius:10px}
+.drill-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px}
+.drill-col h4{margin:0 0 8px;font-size:.86rem;font-weight:600}
+.drill-table td,.drill-table th{padding-top:6px;padding-bottom:6px;font-size:.86em}
+.drill-table .c-down,.drill-events .c-down{color:var(--down);font-weight:600}
+.drill-table .c-degraded,.drill-events .c-degraded{color:var(--degraded);font-weight:600}
+.drill-table .zero{color:var(--faint)}
+.drill-filter{margin-bottom:8px}
+.drill-events{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.drill-events li{display:grid;grid-template-columns:58px 14px minmax(0,1fr);gap:8px;align-items:start;padding:7px 4px;border-bottom:1px solid var(--border);font-size:.86em}
+.drill-events li:last-child{border-bottom:0}
+.drill-events time{color:var(--muted);font-variant-numeric:tabular-nums}
+.drill-events .dot{margin-top:5px}
+.drill-events a{font-weight:600;color:var(--text)}
+.drill-events small{display:block;color:var(--muted);overflow-wrap:anywhere}
+.drill-events .kind{font-size:.72em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin-left:6px}
+.drill-empty{color:var(--muted);font-size:.86em;padding:10px 0}
+.drill.loading .drill-body{opacity:.5}
+@media (max-width:900px){.drill-body{grid-template-columns:1fr}}
+.drill-table-wrap thead th{position:sticky;top:0;background:var(--surface);z-index:1}

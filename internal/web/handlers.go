@@ -442,6 +442,30 @@ func (s *Server) handleDashboardSeries(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"buckets": buckets, "summary": summary})
 }
 
+// handleDashboardDrill lists what happened during one bar of the dashboard
+// chart: each monitor's checks and the status changes and failed checks.
+// Parameters: t (start of the bar, RFC 3339) and hours (1, 6 or 24).
+func (s *Server) handleDashboardDrill(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	from, err := time.Parse(time.RFC3339, q.Get("t"))
+	if err != nil {
+		http.Error(w, "invalid t", http.StatusBadRequest)
+		return
+	}
+	hours, _ := strconv.Atoi(q.Get("hours"))
+	if hours != 1 && hours != 6 && hours != 24 {
+		http.Error(w, "invalid hours", http.StatusBadRequest)
+		return
+	}
+	to := from.Add(time.Duration(hours) * time.Hour)
+	d, err := s.Store.DrillDown(r.Context(), from, to, 200)
+	if err != nil {
+		s.serverError(w, err)
+		return
+	}
+	writeJSON(w, map[string]any{"from": from, "to": to, "monitors": d.Monitors, "events": d.Events, "truncated": d.Truncated})
+}
+
 func (s *Server) handleMonitorDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	m, err := s.Store.GetMonitor(ctx, pathID(r))
