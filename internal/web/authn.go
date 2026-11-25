@@ -154,7 +154,7 @@ func (s *Server) provision(ctx context.Context, id *auth.Identity, autoCreate bo
 		if !autoCreate {
 			return nil, errNoAccount
 		}
-		u, err = s.Store.CreateExternalUser(ctx, id.Source, id.Username, id.ExternalID, id.DisplayName, id.Email)
+		u, err = s.Store.CreateExternalUser(ctx, id.Source, id.Username, id.ExternalID, id.DisplayName, id.Email, "")
 		if err == nil {
 			s.Log.Info("user provisioned", "username", u.Username, "source", u.Source)
 		}
@@ -592,12 +592,12 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 			s.flash(w, r, "/admin/users", false, "Passwords do not match.")
 			return
 		}
-		_, err = s.Store.CreateUserNamed(r.Context(), username, r.PostFormValue("display_name"), r.PostFormValue("password"))
+		_, err = s.Store.CreateUserNamed(r.Context(), username, r.PostFormValue("display_name"), r.PostFormValue("password"), store.RoleAdmin)
 	} else {
 		var name string
 		if name, err = store.CleanDisplayName(r.PostFormValue("display_name")); err == nil {
 			var u *store.User
-			if u, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", ""); err == nil && name != "" {
+			if u, err = s.Store.CreateExternalUser(r.Context(), source, username, "", "", "", store.RoleAdmin); err == nil && name != "" {
 				err = s.Store.SetDisplayName(r.Context(), u.ID, name)
 			}
 		}

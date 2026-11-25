@@ -40,3 +40,17 @@ func TestCleanDisplayName(t *testing.T) {
 		t.Error("control character accepted")
 	}
 }
+
+func TestRoles(t *testing.T) {
+	if !(&User{Role: RoleAdmin}).IsAdmin() || (&User{Role: RoleViewer}).IsAdmin() || (*User)(nil).IsAdmin() {
+		t.Fatal("IsAdmin")
+	}
+	for in, want := range map[string]string{"": RoleViewer, "viewer": RoleViewer, "admin": RoleAdmin} {
+		if got, err := CleanRole(in); err != nil || got != want {
+			t.Errorf("CleanRole(%q) = %q, %v", in, got, err)
+		}
+	}
+	if _, err := CleanRole("root"); err == nil {
+		t.Error("unknown role accepted")
+	}
+}
