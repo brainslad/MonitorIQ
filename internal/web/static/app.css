@@ -823,3 +823,6 @@ button.chip-select:hover,button.chip-select[aria-expanded="true"]{color:var(--te
 /* footer: the custom line above the author credit */
 .footer-line{color:var(--text);opacity:.8;margin-bottom:3px}
 .footer-line[hidden]{display:none}
+
+/* reset to the default logos (Settings → Branding) */
+.logo-reset{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:10px;margin-top:4px;border-top:1px dashed var(--border)}
