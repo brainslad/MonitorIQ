@@ -278,7 +278,7 @@ func (s *Server) dashboardGeo(ctx context.Context, list []store.Monitor) *dashGe
 	if len(d.Targets) > 8 {
 		d.Targets = d.Targets[:8]
 	}
-	d.Map.FitWorld()
+	d.Map.FitMarkers()
 	return d
 }
 

@@ -742,3 +742,120 @@
     setTimeout(function () { btn.classList.remove("busy"); }, 8000);
   });
 })();
+
+// Network map: zoom with the buttons, the mouse wheel or a double click, and
+// pan by dragging. Markers and labels keep their size on screen.
+(function () {
+  var MW = 1000, MH = 500, ASPECT = 1000 / 390, MINW = 8;
+  document.querySelectorAll("[data-geo-zoom]").forEach(function (box) {
+    var svg = box.querySelector("svg.geo-map");
+    if (!svg) return;
+    var v0 = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    var view = v0.slice(), k0 = v0[2] / MW;
+    var items = [], marks = [];
+    svg.querySelectorAll(".geo-mk").forEach(function (g) {
+      var c = g.querySelector("circle:not(.halo)") || g.querySelector("circle");
+      if (!c) return;
+      var cx = +c.getAttribute("cx"), cy = +c.getAttribute("cy");
+      marks.push({ g: g, x: cx, y: cy, r: +c.getAttribute("r") / k0 });
+      g.querySelectorAll("circle").forEach(function (el) {
+        items.push({ el: el, r: +el.getAttribute("r") / k0 });
+      });
+      g.querySelectorAll("text").forEach(function (el) {
+        items.push({ el: el, cx: cx, cy: cy,
+          dx: (+el.getAttribute("x") - cx) / k0, dy: (+el.getAttribute("y") - cy) / k0,
+          fs: +el.getAttribute("font-size") / k0 });
+      });
+    });
+    function apply() {
+      svg.setAttribute("viewBox", view.map(function (n) { return n.toFixed(2); }).join(" "));
+      var k = view[2] / MW;
+      items.forEach(function (it) {
+        if (it.r !== undefined) { it.el.setAttribute("r", (it.r * k).toFixed(3)); return; }
+        it.el.setAttribute("x", (it.cx + it.dx * k).toFixed(3));
+        it.el.setAttribute("y", (it.cy + it.dy * k).toFixed(3));
+        it.el.setAttribute("font-size", (it.fs * k).toFixed(3));
+      });
+      spread(k);
+    }
+    // spread fans out markers that would overlap on screen at this zoom (for
+    // example a monitoring system and a target in the same city) around their
+    // common centre; they come back to their place once there is room.
+    function spread(k) {
+      var n = marks.length, grp = [];
+      for (var i = 0; i < n; i++) grp[i] = i;
+      function root(i) { while (grp[i] !== i) i = grp[i] = grp[grp[i]]; return i; }
+      for (i = 0; i < n; i++) for (var j = i + 1; j < n; j++) {
+        var a = marks[i], b = marks[j];
+        if (Math.hypot(a.x - b.x, a.y - b.y) < (a.r + b.r + 3) * k) grp[root(i)] = root(j);
+      }
+      var sets = {};
+      for (i = 0; i < n; i++) (sets[root(i)] = sets[root(i)] || []).push(marks[i]);
+      Object.keys(sets).forEach(function (key) {
+        var s = sets[key];
+        if (s.length === 1) { s[0].g.removeAttribute("transform"); return; }
+        var mx = 0, my = 0, mr = 0;
+        s.forEach(function (m) { mx += m.x / s.length; my += m.y / s.length; mr = Math.max(mr, m.r); });
+        var ring = (mr + 2) * k / Math.sin(Math.PI / Math.max(s.length, 2));
+        s.forEach(function (m, i) {
+          var t = -Math.PI / 2 + 2 * Math.PI * i / s.length;
+          m.g.setAttribute("transform", "translate(" + (mx + ring * Math.cos(t) - m.x).toFixed(3) + " " + (my + ring * Math.sin(t) - m.y).toFixed(3) + ")");
+        });
+      });
+    }
+    function clamp() {
+      view[2] = Math.min(MW, Math.max(MINW, view[2]));
+      view[3] = view[2] / ASPECT;
+      view[0] = Math.min(MW - view[2], Math.max(0, view[0]));
+      view[1] = Math.min(MH - view[3], Math.max(0, view[1]));
+    }
+    // zoom by f (<1 zooms in) around the map point (px, py).
+    function zoom(f, px, py) {
+      if (px === undefined) { px = view[0] + view[2] / 2; py = view[1] + view[3] / 2; }
+      var w = Math.min(MW, Math.max(MINW, view[2] * f)), s = w / view[2];
+      view = [px - (px - view[0]) * s, py - (py - view[1]) * s, w, w / ASPECT];
+      clamp(); apply();
+    }
+    // toMap turns a mouse position into map coordinates.
+    function toMap(e) {
+      var r = svg.getBoundingClientRect(), sc = Math.max(view[2] / r.width, view[3] / r.height);
+      return [view[0] + view[2] / 2 + (e.clientX - r.left - r.width / 2) * sc,
+              view[1] + view[3] / 2 + (e.clientY - r.top - r.height / 2) * sc, sc];
+    }
+    box.querySelectorAll("[data-zoom]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var a = b.getAttribute("data-zoom");
+        if (a === "in") zoom(1 / 1.6);
+        else if (a === "out") zoom(1.6);
+        else if (a === "fit") { view = v0.slice(); apply(); }
+        else { view = [0, 22, MW, 390]; apply(); }
+      });
+    });
+    apply();
+    svg.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var p = toMap(e);
+      zoom(Math.pow(1.0018, e.deltaY * (e.deltaMode === 1 ? 33 : 1)), p[0], p[1]);
+    }, { passive: false });
+    svg.addEventListener("dblclick", function (e) {
+      var p = toMap(e);
+      zoom(e.shiftKey ? 2 : 0.5, p[0], p[1]);
+    });
+    var drag = null;
+    svg.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, v: view.slice(), sc: toMap(e)[2] };
+      svg.setPointerCapture(e.pointerId);
+      box.classList.add("dragging");
+    });
+    svg.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      view[0] = drag.v[0] - (e.clientX - drag.x) * drag.sc;
+      view[1] = drag.v[1] - (e.clientY - drag.y) * drag.sc;
+      clamp(); apply();
+    });
+    function end() { drag = null; box.classList.remove("dragging"); }
+    svg.addEventListener("pointerup", end);
+    svg.addEventListener("pointercancel", end);
+  });
+})();
