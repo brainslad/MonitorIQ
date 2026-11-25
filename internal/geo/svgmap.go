@@ -137,7 +137,10 @@ func (m *Map) FitWorld() {
 	m.finish()
 }
 
-// FitMarkers zooms to the markers, keeping a 2:1 frame (same as the world).
+// minFitW is the narrowest view FitMarkers zooms to (about 11° of longitude).
+const minFitW = 30.0
+
+// FitMarkers zooms to the markers, keeping the frame of the world view.
 func (m *Map) FitMarkers() {
 	if len(m.Markers) == 0 {
 		m.FitWorld()
@@ -149,7 +152,9 @@ func (m *Map) FitMarkers() {
 		minY, maxY = math.Min(minY, mk.Y), math.Max(maxY, mk.Y)
 	}
 	w, h := maxX-minX, maxY-minY
-	pad := math.Max(28, 0.35*math.Max(w, 2*h))
+	// A small margin, so nearby places (e.g. two cities in one country)
+	// end up far enough apart on screen to tell them apart.
+	pad := math.Max(8, 0.25*math.Max(w, 2*h))
 	w, h = w+2*pad, h+2*pad
 	const aspect = MapW / 390
 	if w/h < aspect {
@@ -157,8 +162,8 @@ func (m *Map) FitMarkers() {
 	} else {
 		h = w / aspect
 	}
-	if w < 150 {
-		w, h = 150, 150/aspect
+	if w < minFitW {
+		w, h = minFitW, minFitW/aspect
 	}
 	if w > MapW {
 		m.FitWorld()

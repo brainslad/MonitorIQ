@@ -1,9 +1,15 @@
-{{define "geomap"}}<svg class="geo-map" viewBox="{{.ViewBox}}" role="img" aria-label="Map of the monitoring system and its targets" preserveAspectRatio="xMidYMid meet">
+{{define "geomap"}}<div class="geo-zoom" data-geo-zoom><svg class="geo-map" viewBox="{{.ViewBox}}" role="img" aria-label="Map of the monitoring system and its targets" preserveAspectRatio="xMidYMid meet">
 <path class="geo-grid" d="{{.Grid}}"/>
 <use class="geo-land" href="/static/world.svg#land" x="0" y="0" width="1000" height="500"/>
 {{range .Lines}}<path class="geo-line {{.Kind}} {{.Status}}" d="{{.D}}"/>{{end}}
 {{$fs := .FontSize}}{{range .Markers}}<g class="geo-mk {{.Kind}} {{.Status}}"><title>{{.Title}}</title>{{if eq .Kind "probe"}}<circle class="halo" cx="{{printf "%.2f" .X}}" cy="{{printf "%.2f" .Y}}" r="{{printf "%.2f" (mul .R 2.2)}}"/>{{end}}<circle cx="{{printf "%.2f" .X}}" cy="{{printf "%.2f" .Y}}" r="{{printf "%.2f" .R}}"/>{{if gt .Count 1}}<text class="cnt" x="{{printf "%.2f" .X}}" y="{{printf "%.2f" (add2 .Y (mul $fs 0.3))}}" text-anchor="middle" font-size="{{printf "%.2f" (mul $fs 0.75)}}">{{.Count}}</text>{{end}}{{if .Label}}<text x="{{printf "%.2f" .LX}}" y="{{printf "%.2f" .LY}}" text-anchor="{{.Anchor}}" font-size="{{printf "%.2f" $fs}}">{{.Label}}</text>{{end}}</g>{{end}}
-</svg>{{end}}
+</svg>
+<div class="geo-zoom-ctl" role="group" aria-label="Zoom the map">
+<button type="button" data-zoom="in" title="Zoom in" aria-label="Zoom in">+</button>
+<button type="button" data-zoom="out" title="Zoom out" aria-label="Zoom out">−</button>
+<button type="button" data-zoom="fit" title="Fit the locations" aria-label="Fit the locations"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+<button type="button" data-zoom="world" title="Whole world" aria-label="Whole world"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></button>
+</div></div>{{end}}
 
 {{define "geo-legend"}}<div class="geo-legend small muted"><span><i class="lg probe"></i>Monitoring system</span><span><i class="lg up"></i>Operational</span><span><i class="lg degraded"></i>Degraded</span><span><i class="lg down"></i>Down</span>{{if .}}<span><i class="lg hop"></i>Traceroute hop</span>{{end}}</div>{{end}}
 
