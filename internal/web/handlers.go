@@ -20,9 +20,18 @@ import (
 
 // ---------------------------------------------------------------- auth
 
+// safeNext returns next when it is a path on this site, else "/". Browsers
+// drop tabs and newlines from URLs and read a backslash as a slash, so
+// "/\t/evil.example" would leave the site: any control character, space or
+// backslash is refused.
 func safeNext(next string) string {
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.HasPrefix(next, "/\\") {
+	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
 		return "/"
+	}
+	for _, c := range next {
+		if c <= ' ' || c == 0x7f || c == '\\' {
+			return "/"
+		}
 	}
 	return next
 }

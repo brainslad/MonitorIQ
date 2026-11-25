@@ -79,6 +79,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.renderStatus(w, r, http.StatusUnauthorized, "login", &page{Title: "Sign in", Flash: msg,
 			Data: s.loginData(r, st, next, username)})
 	}
+	if crossSite(r) { // login CSRF: a form on another site signing the browser in
+		http.Error(w, "Invalid request (cross-site sign-in).", http.StatusForbidden)
+		return
+	}
 	if s.limiter.blocked(ip) {
 		fail("Too many failed attempts. Please wait 15 minutes.")
 		return
