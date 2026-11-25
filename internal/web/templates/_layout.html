@@ -54,7 +54,7 @@
 {{end}}
 <div class="main">
   <header class="topbar">
-    {{if .User}}<button type="button" class="icon-btn sb-open" data-sidebar-open aria-label="Open the menu" aria-controls="sidebar">{{template "icon" "menu"}}</button>{{end}}
+    {{if .User}}<button type="button" class="icon-btn sb-menu" data-sidebar-open aria-label="Open the menu" aria-controls="sidebar">{{template "icon" "menu"}}</button>{{end}}
     <nav class="crumbs" aria-label="Breadcrumb">{{if .User}}<span>{{section .Active}}</span>{{template "icon" "chevron"}}{{end}}<strong>{{.Title}}</strong></nav>
     <div class="top-actions">
       {{if .User}}
