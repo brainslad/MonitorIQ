@@ -204,6 +204,38 @@ func (s *Store) SetDisplayName(ctx context.Context, id int64, name string) error
 	return err
 }
 
+// HeatMonitors returns the monitors a user pinned to the availability map.
+func (s *Store) HeatMonitors(ctx context.Context, id int64) ([]int64, error) {
+	var ids []int64
+	err := s.Pool.QueryRow(ctx, `SELECT heat_monitors FROM users WHERE id=$1`, id).Scan(&ids)
+	return ids, notFound(err)
+}
+
+// MaxHeatMonitors is the number of rows of the dashboard availability map.
+const MaxHeatMonitors = 10
+
+// SetHeatMonitors pins up to MaxHeatMonitors monitors, in order, to a user's
+// availability map. Unknown ids and duplicates are dropped.
+func (s *Store) SetHeatMonitors(ctx context.Context, id int64, monitors []int64) error {
+	seen := map[int64]bool{}
+	var keep []int64
+	for _, m := range monitors {
+		if m > 0 && !seen[m] {
+			seen[m] = true
+			keep = append(keep, m)
+		}
+	}
+	if keep == nil {
+		keep = []int64{}
+	}
+	// Keep the order given, drop monitors that do not exist, then cap.
+	_, err := s.Pool.Exec(ctx, `UPDATE users SET heat_monitors = coalesce((
+		SELECT array_agg(x.id ORDER BY x.n) FROM (
+			SELECT p.id, p.n FROM unnest($2::bigint[]) WITH ORDINALITY AS p(id, n)
+			JOIN monitors m ON m.id = p.id ORDER BY p.n LIMIT $3) x), '{}') WHERE id=$1`, id, keep, MaxHeatMonitors)
+	return err
+}
+
 func (s *Store) GetUser(ctx context.Context, id int64) (*User, error) {
 	return scanUser(s.Pool.QueryRow(ctx, `SELECT `+userCols+` FROM users u WHERE id=$1`, id))
 }
