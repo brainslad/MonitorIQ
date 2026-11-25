@@ -213,6 +213,7 @@ Installer options:
 The dashboard and back-office require a sign-in. Status pages and their JSON API are public.
 Sessions last 7 days and are stored in the database; cookies are HttpOnly, SameSite=Lax and Secure under HTTPS.
 After 10 failed attempts (password or 2FA code) an IP is blocked for 15 minutes.
+Local passwords must be 8 to 72 characters long; common passwords (such as `password1` or `admin123`), one character repeated and plain runs (`12345678`, `abcdefgh`) are refused. Existing passwords keep working until they are changed.
 
 Everything below is configured under **Settings → Authentication**; secrets (LDAP bind password, OIDC client secret, TOTP keys) are stored encrypted with `MONITORIQ_SECRET_KEY`.
 

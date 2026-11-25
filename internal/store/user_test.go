@@ -40,3 +40,22 @@ func TestCleanDisplayName(t *testing.T) {
 		t.Error("control character accepted")
 	}
 }
+
+func TestWeakPassword(t *testing.T) {
+	for _, pw := range []string{"12345678", "87654321", "abcdefgh", "aaaaaaaa", "Password1", "ADMIN12345", "qwertyuiop", "11111111"} {
+		if !weakPassword(pw) {
+			t.Errorf("weakPassword(%q) = false, want true", pw)
+		}
+		if _, err := hashPassword(pw); err == nil {
+			t.Errorf("hashPassword(%q) accepted a weak password", pw)
+		}
+	}
+	for _, pw := range []string{"correct horse battery", "Tr0ub4dor&3x", "9fK2mQ7xLp", "s2mon03-uptime!"} {
+		if weakPassword(pw) {
+			t.Errorf("weakPassword(%q) = true, want false", pw)
+		}
+	}
+	if _, err := hashPassword(strings.Repeat("x7", 40)); err == nil {
+		t.Error("hashPassword accepted an 80-byte password (bcrypt only uses 72)")
+	}
+}

@@ -101,8 +101,48 @@ func hashPassword(pw string) (string, error) {
 	if len(pw) < 8 {
 		return "", errors.New("the password must be at least 8 characters long")
 	}
+	if len(pw) > 72 {
+		return "", errors.New("the password can be at most 72 bytes long")
+	}
+	if weakPassword(pw) {
+		return "", errors.New("this password is too easy to guess: avoid common passwords, repeated characters and runs such as 12345678 or abcdefgh")
+	}
 	h, err := bcrypt.GenerateFromPassword([]byte(pw), 12)
 	return string(h), err
+}
+
+// commonPasswords are passwords of 8 or more characters that sit at the top
+// of every leaked-password list: guessing them takes only a few attempts.
+var commonPasswords = map[string]bool{}
+
+func init() {
+	for _, p := range strings.Fields(`password password1 password12 password123 passw0rd p@ssw0rd p@ssword
+		iloveyou sunshine princess football baseball welcome welcome1 welcome123 monkey123 dragon123
+		qwertyuiop qwerty123 qwerty12 1q2w3e4r 1q2w3e4r5t q1w2e3r4 qazwsxedc zaq12wsx asdfghjkl asdfgh123
+		letmein1 trustno1 superman batman123 master123 shadow123 michael1 jennifer charlie1
+		admin123 admin1234 admin12345 administrator root1234 changeme changeme1 default1 secret123
+		monitoriq monitoriq1 uptime123 computer internet whatever starwars liverpool chelsea1 benfica1
+		portugal portugal1 lisboa123 sporting1 abcd1234 abc12345 aa123456 a1234567 1234qwer 123qwe123
+		11111111 00000000 88888888 12341234 11223344 123123123 1234abcd 987654321 147258369 123654789`) {
+		commonPasswords[p] = true
+	}
+}
+
+// weakPassword reports whether pw is a common password, one character
+// repeated, or a plain run of digits or letters (12345678, abcdefgh, 87654321).
+func weakPassword(pw string) bool {
+	l := strings.ToLower(pw)
+	if commonPasswords[l] {
+		return true
+	}
+	same, up, down := true, true, true
+	for i := 1; i < len(l); i++ {
+		d := int(l[i]) - int(l[i-1])
+		same = same && d == 0
+		up = up && d == 1
+		down = down && d == -1
+	}
+	return same || up || down
 }
 
 func uniqueErr(err error) error {
