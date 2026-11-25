@@ -6,7 +6,7 @@
   <h2>Logo and footer</h2>
   {{template "csrf" .CSRF}}
   <fieldset><legend>Logo</legend>
-    <p class="muted small">Replaces the MonitorIQ logo in the menu and on the sign-in page. The slogan “{{.Data.Slogan}}” stays underneath. PNG, JPEG, GIF, WebP or SVG, up to {{.Data.MaxKB}} KB; a wide image about 40 px high works best.</p>
+    <p class="muted small">Replaces the MonitorIQ logo in the menu and on the sign-in page. The slogan “{{.Data.Slogan}}” stays underneath. PNG, JPEG or GIF up to {{.Data.MaxMB}} MB (shrunk automatically), or SVG or WebP up to 512 KB. Any size is shown at the logo height (40 px in the menu); a wide logo with little empty margin looks best.</p>
     <label>Logo{{if $b.Logo}} <span class="muted small">(choose a file to replace it)</span>{{end}}<input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="light"></label>
     {{if $b.Logo}}<label class="check"><input type="checkbox" name="remove_logo" value="1"> Remove the logo and go back to the MonitorIQ logo</label>{{end}}
     <label>Logo for the dark theme <span class="muted small">(optional: a light version of the logo)</span><input type="file" name="logo_dark" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg" data-logo-input="dark"></label>

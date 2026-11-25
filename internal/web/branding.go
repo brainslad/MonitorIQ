@@ -30,7 +30,10 @@ const (
 	// The logo images are kept in their own settings rows (base64).
 	logoKey     = "branding_logo"
 	logoDarkKey = "branding_logo_dark"
-	// MaxLogoBytes bounds an uploaded logo.
+	// MaxUploadBytes bounds an uploaded logo file; PNG, JPEG and GIF
+	// images are then shrunk to the logo box (see fitLogo).
+	MaxUploadBytes = 5 << 20
+	// MaxLogoBytes bounds a stored logo (an SVG or WebP is stored as sent).
 	MaxLogoBytes = 512 << 10
 	// MaxFooterLen bounds the footer line, in characters.
 	MaxFooterLen = 200
@@ -141,8 +144,8 @@ func logoType(data []byte) (string, error) {
 	if len(data) == 0 {
 		return "", errors.New("the logo file is empty")
 	}
-	if len(data) > MaxLogoBytes {
-		return "", errors.New("the logo can be at most 512 KB")
+	if len(data) > MaxUploadBytes {
+		return "", errors.New("the logo file can be at most 5 MB")
 	}
 	switch ct := http.DetectContentType(data); ct {
 	case "image/png", "image/jpeg", "image/gif", "image/webp":
@@ -215,7 +218,7 @@ func (s *Server) handleLogo(dark bool) http.HandlerFunc {
 
 func (s *Server) handleBrandingForm(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "branding", "Branding", "settings", map[string]any{
-		"B": s.branding(r.Context()), "Slogan": defaultSlogan, "MaxKB": MaxLogoBytes >> 10, "MaxFooter": MaxFooterLen,
+		"B": s.branding(r.Context()), "Slogan": defaultSlogan, "MaxMB": MaxUploadBytes >> 20, "MaxFooter": MaxFooterLen,
 	})
 }
 
@@ -229,7 +232,7 @@ func readLogo(r *http.Request, field string) ([]byte, string, error) {
 		return nil, "", errors.New("the logo could not be read")
 	}
 	defer f.Close()
-	data, err := io.ReadAll(io.LimitReader(f, MaxLogoBytes+1))
+	data, err := io.ReadAll(io.LimitReader(f, MaxUploadBytes+1))
 	if err != nil {
 		return nil, "", errors.New("the logo could not be read")
 	}
@@ -237,7 +240,16 @@ func readLogo(r *http.Request, field string) ([]byte, string, error) {
 		return nil, "", nil
 	}
 	ct, err := logoType(data)
-	return data, ct, err
+	if err != nil {
+		return nil, "", err
+	}
+	if data, ct, err = fitLogo(data, ct); err != nil {
+		return nil, "", err
+	}
+	if len(data) > MaxLogoBytes {
+		return nil, "", errors.New("an SVG or WebP logo can be at most 512 KB")
+	}
+	return data, ct, nil
 }
 
 func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
@@ -285,7 +297,7 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 func (s *Server) limitBody(n int64, back string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength > n {
-			s.flash(w, r, back, false, "The upload is too large: a logo can be at most 512 KB.")
+			s.flash(w, r, back, false, "The upload is too large: a logo file can be at most 5 MB.")
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, n)

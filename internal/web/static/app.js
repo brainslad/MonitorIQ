@@ -323,7 +323,7 @@
       inp.addEventListener("change", function () {
         var f = inp.files && inp.files[0];
         if (!f) return;
-        if (f.size > 512 * 1024) { inp.value = ""; inp.setCustomValidity("The logo can be at most 512 KB."); inp.reportValidity(); return; }
+        if (f.size > 5 * 1024 * 1024) { inp.value = ""; inp.setCustomValidity("The logo file can be at most 5 MB."); inp.reportValidity(); return; }
         inp.setCustomValidity("");
         // A data: URL, because the page's CSP does not allow blob: images.
         var rd = new FileReader();
