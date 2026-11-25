@@ -764,6 +764,9 @@ body.has-bulk main{padding-bottom:90px}
 .brand-logo img{display:block;height:40px;width:auto;max-width:168px;object-fit:contain;object-position:left center}
 .brand.big .brand-logo img{height:56px;max-width:260px;margin:0 auto;object-position:center}
 .brand.big.custom .brand-text{text-align:center}
+/* the sign-in pages show the logo without the slogan */
+.card.login .brand-sub{display:none}
+.card.login .brand-logo{margin-bottom:0}
 .brand.custom .logo.mini{display:none;background:transparent;box-shadow:none;overflow:hidden}
 /* collapsed menu: the compact logo, or else the whole logo shrunk to fit */
 .brand.custom .logo.mini img{filter:none;width:38px;height:38px;object-fit:contain;object-position:center}
