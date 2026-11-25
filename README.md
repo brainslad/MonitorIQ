@@ -211,6 +211,21 @@ Installer options:
 ### Authentication
 
 The dashboard and back-office require a sign-in. Status pages and their JSON API are public.
+
+#### Roles
+
+Each user is an **Administrator** or **Read-only**:
+
+| | Administrator | Read-only |
+|---|:-:|:-:|
+| Dashboard, monitor pages, charts, drill-down, network maps | ✓ | ✓ |
+| Lists of monitors, hosts, groups and status pages | ✓ | ✓ |
+| Export to Excel | ✓ | ✓ |
+| Own account: password, 2FA, display name, e-mail alerts, sessions | ✓ | ✓ |
+| Create, edit, pause, delete or *Check now* monitors; hosts, groups, status pages | ✓ | |
+| Users and roles, Settings (retention, authentication, e-mail, geolocation, branding) | ✓ | |
+
+Administrators set the role under **Users** (when creating a user, or in the *Role* column). New users are read-only unless an administrator chooses otherwise, and so are LDAP and SSO users created automatically at their first sign-in. Accounts that existed before roles were added stay administrators, and so do accounts created with `monitoriq user set`. There is always at least one administrator: the last one cannot be deleted or made read-only, and nobody can change their own role. A role change signs the user out, so it applies at once. The server checks the role on every request; a read-only user who opens an administration address gets *403 Administrators only*.
 Sessions last 7 days and are stored in the database; cookies are HttpOnly, SameSite=Lax and Secure under HTTPS.
 After 10 failed attempts (password or 2FA code) an IP is blocked for 15 minutes.
 
@@ -307,7 +322,7 @@ Summary, daily and hourly figures come from the hourly aggregates, so they reach
 ```bash
 monitoriq serve                                # server (used by systemd)
 monitoriq migrate                              # apply migrations
-monitoriq user set admin                       # create a user / reset its password
+monitoriq user set admin                       # create an administrator / reset its password
 monitoriq user list                            # with sign-in source and 2FA state
 monitoriq user reset-2fa jdoe                  # turn 2FA off for a user (lost phone)
 monitoriq auth local-login on                  # show the password form again (SSO-only lock-out)
