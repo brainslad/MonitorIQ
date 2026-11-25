@@ -111,7 +111,7 @@ func TestFitLogo(t *testing.T) {
 	if err := png.Encode(&buf, src); err != nil {
 		t.Fatal(err)
 	}
-	out, ct, err := fitLogo(buf.Bytes(), "image/png")
+	out, ct, err := fitLogo(buf.Bytes(), "image/png", logoMaxW, logoMaxH)
 	if err != nil || ct != "image/png" {
 		t.Fatalf("fitLogo: %q %v", ct, err)
 	}
@@ -130,7 +130,7 @@ func TestFitLogo(t *testing.T) {
 	}
 	// Small images and SVG are kept as they are.
 	small := []byte("<svg xmlns='http://www.w3.org/2000/svg'/>")
-	if out, ct, _ := fitLogo(small, "image/svg+xml"); !bytes.Equal(out, small) || ct != "image/svg+xml" {
+	if out, ct, _ := fitLogo(small, "image/svg+xml", logoMaxW, logoMaxH); !bytes.Equal(out, small) || ct != "image/svg+xml" {
 		t.Error("svg changed")
 	}
 }

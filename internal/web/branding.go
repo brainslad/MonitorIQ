@@ -30,6 +30,7 @@ const (
 	// The logo images are kept in their own settings rows (base64).
 	logoKey     = "branding_logo"
 	logoDarkKey = "branding_logo_dark"
+	logoMiniKey = "branding_logo_mini"
 	// MaxUploadBytes bounds an uploaded logo file; PNG, JPEG and GIF
 	// images are then shrunk to the logo box (see fitLogo).
 	MaxUploadBytes = 5 << 20
@@ -52,6 +53,7 @@ type Branding struct {
 	Footer   string    `json:"footer"`
 	Logo     *logoInfo `json:"logo,omitempty"`
 	LogoDark *logoInfo `json:"logo_dark,omitempty"`
+	LogoMini *logoInfo `json:"logo_mini,omitempty"` // compact (collapsed) menu
 }
 
 // FooterLine is the custom line shown above the credit in the footer
@@ -75,6 +77,15 @@ func (b Branding) LogoDarkURL() string {
 		return b.LogoURL()
 	}
 	return "/branding/logo-dark?v=" + b.LogoDark.Sum
+}
+
+// LogoMiniURL is the square logo for the compact menu ("" when none: the
+// main logo is then fitted into the square).
+func (b Branding) LogoMiniURL() string {
+	if b.LogoMini == nil {
+		return ""
+	}
+	return "/branding/logo-mini?v=" + b.LogoMini.Sum
 }
 
 // brandCache keeps the branding in memory; it is read on every page.
@@ -180,12 +191,15 @@ func logoSum(data []byte) string {
 // handleLogo serves a custom logo. It is public: the sign-in page shows it.
 // Images are shown through <img>, which never runs scripts; the CSP below
 // also blocks scripts when an SVG logo is opened directly.
-func (s *Server) handleLogo(dark bool) http.HandlerFunc {
+func (s *Server) handleLogo(which string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b := s.branding(r.Context())
 		info, key := b.Logo, logoKey
-		if dark && b.LogoDark != nil {
+		switch {
+		case which == "dark" && b.LogoDark != nil:
 			info, key = b.LogoDark, logoDarkKey
+		case which == "mini":
+			info, key = b.LogoMini, logoMiniKey
 		}
 		if info == nil {
 			http.NotFound(w, r)
@@ -223,7 +237,7 @@ func (s *Server) handleBrandingForm(w http.ResponseWriter, r *http.Request) {
 }
 
 // readLogo reads an uploaded logo field; it returns nil when none was sent.
-func readLogo(r *http.Request, field string) ([]byte, string, error) {
+func readLogo(r *http.Request, field string, maxW, maxH int) ([]byte, string, error) {
 	f, _, err := r.FormFile(field)
 	if errors.Is(err, http.ErrMissingFile) {
 		return nil, "", nil
@@ -243,7 +257,7 @@ func readLogo(r *http.Request, field string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if data, ct, err = fitLogo(data, ct); err != nil {
+	if data, ct, err = fitLogo(data, ct, maxW, maxH); err != nil {
 		return nil, "", err
 	}
 	if len(data) > MaxLogoBytes {
@@ -264,8 +278,13 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 	for _, l := range []struct {
 		field, key string
 		info       **logoInfo
-	}{{"logo", logoKey, &b.Logo}, {"logo_dark", logoDarkKey, &b.LogoDark}} {
-		data, ct, err := readLogo(r, l.field)
+		maxW, maxH int
+	}{
+		{"logo", logoKey, &b.Logo, logoMaxW, logoMaxH},
+		{"logo_dark", logoDarkKey, &b.LogoDark, logoMaxW, logoMaxH},
+		{"logo_mini", logoMiniKey, &b.LogoMini, miniMax, miniMax},
+	} {
+		data, ct, err := readLogo(r, l.field, l.maxW, l.maxH)
 		if err != nil {
 			s.flash(w, r, "/admin/branding", false, capitalize(err.Error())+".")
 			return
@@ -290,13 +309,13 @@ func (s *Server) handleBrandingSave(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogoReset(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	b := s.branding(ctx)
-	for _, key := range []string{logoKey, logoDarkKey} {
+	for _, key := range []string{logoKey, logoDarkKey, logoMiniKey} {
 		if err := s.Store.SetSetting(ctx, key, ""); err != nil {
 			s.serverError(w, err)
 			return
 		}
 	}
-	b.Logo, b.LogoDark = nil, nil
+	b.Logo, b.LogoDark, b.LogoMini = nil, nil, nil
 	if err := s.saveBranding(ctx, b); err != nil {
 		s.serverError(w, err)
 		return
