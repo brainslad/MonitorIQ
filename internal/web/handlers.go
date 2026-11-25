@@ -560,7 +560,9 @@ func (s *Server) handleDashboardSeries(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDashboardDrill(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from, err := time.Parse(time.RFC3339, q.Get("t"))
-	if err != nil {
+	// Data is kept for two years at most: refuse times outside that range
+	// (a year past 9999 cannot even be written back as JSON).
+	if now := time.Now(); err != nil || from.Before(now.AddDate(-3, 0, 0)) || from.After(now.Add(24*time.Hour)) {
 		http.Error(w, "invalid t", http.StatusBadRequest)
 		return
 	}

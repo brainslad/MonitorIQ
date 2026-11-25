@@ -115,3 +115,15 @@ func TestCheckSVG(t *testing.T) {
 		}
 	}
 }
+
+func TestDrillTimeRange(t *testing.T) {
+	s := &Server{}
+	for _, v := range []string{"0001-01-01T00:00:00Z", "9999-12-31T23:00:00Z", "x", ""} {
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/api/dashboard/drill?hours=24&t="+v, nil)
+		s.handleDashboardDrill(rec, r)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("t=%q: status %d, want 400", v, rec.Code)
+		}
+	}
+}
