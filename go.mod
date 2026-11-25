@@ -1,10 +1,12 @@
 module github.com/brainslad/monitoriq
 
-go 1.22
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/coreos/go-oidc/v3 v3.11.0
-	github.com/go-jose/go-jose/v4 v4.0.2
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-ldap/ldap/v3 v3.4.8
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/oschwald/maxminddb-golang v1.13.1
